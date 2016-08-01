@@ -1,6 +1,16 @@
 package com.pokescanner.loaders;
 
+import android.util.Log;
+
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.Wearable;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.pokegoapi.api.PokemonGo;
 import com.pokegoapi.api.map.Map;
 import com.pokegoapi.api.map.MapObjects;
@@ -13,6 +23,8 @@ import com.pokegoapi.exceptions.LoginFailedException;
 import com.pokegoapi.exceptions.RemoteServerException;
 import com.pokescanner.events.ForceLogoutEvent;
 import com.pokescanner.events.ScanCircleEvent;
+import com.pokescanner.helper.PokemonListLoader;
+import com.pokescanner.objects.FilterItem;
 import com.pokescanner.objects.Gym;
 import com.pokescanner.objects.PokeStop;
 import com.pokescanner.objects.Pokemons;
@@ -20,6 +32,7 @@ import com.pokescanner.objects.User;
 
 import org.greenrobot.eventbus.EventBus;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -34,12 +47,14 @@ public class ObjectLoaderPTC extends Thread {
     int SLEEP_TIME;
     private Realm realm;
     int position;
+    GoogleApiClient mGoogleWearApiClient;
 
-    public ObjectLoaderPTC(User user, List<LatLng> scanMap, int SLEEP_TIME, int pos) {
+    public ObjectLoaderPTC(User user, List<LatLng> scanMap, int SLEEP_TIME, int pos, GoogleApiClient mGoogleWearApiClient) {
         this.user = user;
         this.scanMap = scanMap;
         this.SLEEP_TIME = SLEEP_TIME;
         this.position = pos;
+        this.mGoogleWearApiClient = mGoogleWearApiClient;
     }
 
     @Override
@@ -90,8 +105,10 @@ public class ObjectLoaderPTC extends Thread {
                                         realm.copyToRealmOrUpdate(new PokeStop(pokestopOut));
                                 }
                             });
-                            realm.close();
 
+
+                            sendPokemonListToWear();
+                            realm.close();
                             Thread.sleep(SLEEP_TIME);
                     }
                 }
@@ -105,6 +122,32 @@ public class ObjectLoaderPTC extends Thread {
         }catch (AsyncPokemonGoException e) {
             e.printStackTrace();
         }
+    }
+    private void sendPokemonListToWear(){
+        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+        ArrayList<Pokemons> listout = new ArrayList<>();
+
+
+
+
+        for (int i = 0; i < pokelist.size(); i++) {
+            Pokemons pokemons = pokelist.get(i);
+            //IF OUR POKEMANS IS FILTERED WE AINT SHOWIN HIM
+            if (!PokemonListLoader.getFilteredList().contains(new FilterItem(pokemons.getNumber()))) {
+
+                //ADD OUR POKEMANS TO OUR OUT LIST
+                listout.add(pokemons);
+            }
+        }
+
+
+        Gson gson = new Gson();
+        String json = gson.toJson(listout,new TypeToken<ArrayList<Pokemons>>() {}.getType());
+        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/pokemonlist");
+        putDataMapReq.getDataMap().putString("pokemons", json);
+        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
+        PendingResult<DataApi.DataItemResult> pendingResult =
+                Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);
     }
 
 

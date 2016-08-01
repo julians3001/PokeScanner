@@ -12,6 +12,7 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.PowerManager;
 import android.os.Vibrator;
 import android.support.design.widget.FloatingActionButton;
 import android.support.multidex.MultiDex;
@@ -274,7 +275,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (SettingsUtil.getSettings(MapsActivity.this).isDrivingModeEnabled() && moveCameraToCurrentPosition()) {
                 scanPosition = getCurrentLocation();
             }
-
+            PowerManager mgr = (PowerManager)MapsActivity.this.getSystemService(Context.POWER_SERVICE);
+            PowerManager.WakeLock wakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakeLock");
+            wakeLock.acquire();
             if (scanPosition != null) {
                 scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
                 if (scanMap != null) {
@@ -286,6 +289,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setScanMap(scanMap);
                     //Set our users
                     MultiAccountLoader.setUsers(users);
+                    //Set GoogleWearAPI
+                    MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
                     //Begin our threads???
                     MultiAccountLoader.startThreads();
                 } else {
@@ -633,58 +638,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 showProgressbar(false);
             }
 
-            sendPokemonListToWear();
         }
     }
 
-    private void sendPokemonListToWear(){
-        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
-        ArrayList<Pokemons> listout = new ArrayList<>();
 
-        LatLng latlng = getCurrentLocation();
-
-        if (latlng == null) {
-            try {
-                latlng = getCameraLocation();
-            } catch (NoMapException e) {
-                e.printStackTrace();
-            } catch (NoCameraPositionException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (latlng != null) {
-            Location location = new Location("");
-            location.setLatitude(latlng.latitude);
-            location.setLongitude(latlng.longitude);
-            //Write distance to pokemons
-            for (int i = 0; i < pokelist.size(); i++) {
-                Pokemons pokemons = pokelist.get(i);
-                //IF OUR POKEMANS IS FILTERED WE AINT SHOWIN HIM
-                if (!PokemonListLoader.getFilteredList().contains(new FilterItem(pokemons.getNumber()))) {
-                    //DO MATH
-                    Location temp = new Location("");
-
-                    temp.setLatitude(pokemons.getLatitude());
-                    temp.setLongitude(pokemons.getLongitude());
-
-                    double distance = location.distanceTo(temp);
-                    pokemons.setDistance(distance);
-
-                    //ADD OUR POKEMANS TO OUR OUT LIST
-                    listout.add(pokemons);
-                }
-            }
-        }
-
-        Gson gson = new Gson();
-        String json = gson.toJson(listout,new TypeToken<ArrayList<Pokemons>>() {}.getType());
-        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/pokemonlist");
-        putDataMapReq.getDataMap().putString("pokemons", json);
-        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
-        PendingResult<DataApi.DataItemResult> pendingResult =
-                Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);
-    }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void forceRefreshEvent(ForceRefreshEvent event) {
@@ -746,7 +703,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onStop() {
         EventBus.getDefault().unregister(this);
         mGoogleApiClient.disconnect();
-        mGoogleWearApiClient.disconnect();
+        //mGoogleWearApiClient.disconnect();
         super.onStop();
     }
 
@@ -1066,7 +1023,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             });
 
             forceRefreshEvent(new ForceRefreshEvent());
-            sendPokemonListToWear();
+            clearPokemonListOnWear();
         }
     }
     @OnLongClick(R.id.btnClear)
@@ -1090,7 +1047,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             });
             forceRefreshEvent(new ForceRefreshEvent());
 
-            sendPokemonListToWear();
+            clearPokemonListOnWear();
         }
         return true;
     }
@@ -1149,5 +1106,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void removeAdapterAndListener() {
         mMap.setInfoWindowAdapter(null);
         mMap.setOnInfoWindowClickListener(null);
+    }
+
+    private void clearPokemonListOnWear(){
+        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+        ArrayList<Pokemons> listout = new ArrayList<>();
+
+
+
+        Gson gson = new Gson();
+        String json = gson.toJson(listout,new TypeToken<ArrayList<Pokemons>>() {}.getType());
+        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/pokemonlist");
+        putDataMapReq.getDataMap().putString("pokemons", json);
+        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
+        PendingResult<DataApi.DataItemResult> pendingResult =
+                Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);
     }
 }
