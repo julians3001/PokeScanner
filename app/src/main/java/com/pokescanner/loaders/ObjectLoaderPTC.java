@@ -1,7 +1,5 @@
 package com.pokescanner.loaders;
 
-import android.util.Log;
-
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.maps.model.LatLng;
@@ -21,7 +19,7 @@ import com.pokegoapi.auth.PtcCredentialProvider;
 import com.pokegoapi.exceptions.AsyncPokemonGoException;
 import com.pokegoapi.exceptions.LoginFailedException;
 import com.pokegoapi.exceptions.RemoteServerException;
-import com.pokescanner.events.ForceLogoutEvent;
+import com.pokescanner.events.ForceLogOutEvent;
 import com.pokescanner.events.ScanCircleEvent;
 import com.pokescanner.helper.PokemonListLoader;
 import com.pokescanner.objects.FilterItem;
@@ -68,7 +66,7 @@ public class ObjectLoaderPTC extends Thread {
                 if (user.getToken() != null) {
                     provider = new GoogleUserCredentialProvider(client, user.getToken().getRefreshToken());
                 } else {
-                    EventBus.getDefault().post(new ForceLogoutEvent());
+                    EventBus.getDefault().post(new ForceLogOutEvent());
                 }
             } else {
                 provider = new PtcCredentialProvider(client, user.getUsername(), user.getPassword());

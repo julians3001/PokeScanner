@@ -59,7 +59,7 @@ import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.pokescanner.events.ForceLogoutEvent;
+import com.pokescanner.events.ForceLogOutEvent;
 import com.pokescanner.events.ForceRefreshEvent;
 import com.pokescanner.events.InterruptedExecptionEvent;
 import com.pokescanner.events.LoginFailedExceptionEvent;
@@ -674,7 +674,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
-    public void onForceLogOutEvent(ForceLogoutEvent event) {
+    public void onForceLogOutEvent(ForceLogOutEvent event) {
         showToast(R.string.ERROR_LOGIN);
         logOut();
     }
