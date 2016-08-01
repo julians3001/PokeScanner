@@ -22,6 +22,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -39,6 +40,7 @@ import com.github.clans.fab.FloatingActionMenu;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -50,7 +52,13 @@ import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
-import com.pokescanner.events.ForceLogOutEvent;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.Wearable;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.pokescanner.events.ForceLogoutEvent;
 import com.pokescanner.events.ForceRefreshEvent;
 import com.pokescanner.events.InterruptedExecptionEvent;
 import com.pokescanner.events.LoginFailedExceptionEvent;
@@ -130,6 +138,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     Realm realm;
 
     private GoogleApiClient mGoogleApiClient;
+    private GoogleApiClient mGoogleWearApiClient;
     List<LatLng> scanMap = new ArrayList<>();
 
     private Map<Pokemons, Marker> pokemonsMarkerMap = new HashMap<>();
@@ -138,6 +147,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private ArrayList<Circle> circleArray = new ArrayList<>();
 
     Circle mBoundingBox = null;
+
+    String TAG = "wear";
 
     int pos = 1;
     //Used for determining Scan status
@@ -149,6 +160,28 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        mGoogleWearApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
+                    @Override
+                    public void onConnected(Bundle connectionHint) {
+                        Log.d(TAG, "onConnected: " + connectionHint);
+                        // Now you can use the Data Layer API
+                    }
+                    @Override
+                    public void onConnectionSuspended(int cause) {
+                        Log.d(TAG, "onConnectionSuspended: " + cause);
+                    }
+                })
+                .addOnConnectionFailedListener(new OnConnectionFailedListener() {
+                    @Override
+                    public void onConnectionFailed(ConnectionResult result) {
+                        Log.d(TAG, "onConnectionFailed: " + result);
+                    }
+                })
+                // Request access only to the Wearable API
+                .addApi(Wearable.API)
+                .build();
+
         MultiDex.install(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
@@ -599,7 +632,58 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if((int) progress == 100) {
                 showProgressbar(false);
             }
+
+            sendPokemonListToWear();
         }
+    }
+
+    private void sendPokemonListToWear(){
+        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+        ArrayList<Pokemons> listout = new ArrayList<>();
+
+        LatLng latlng = getCurrentLocation();
+
+        if (latlng == null) {
+            try {
+                latlng = getCameraLocation();
+            } catch (NoMapException e) {
+                e.printStackTrace();
+            } catch (NoCameraPositionException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (latlng != null) {
+            Location location = new Location("");
+            location.setLatitude(latlng.latitude);
+            location.setLongitude(latlng.longitude);
+            //Write distance to pokemons
+            for (int i = 0; i < pokelist.size(); i++) {
+                Pokemons pokemons = pokelist.get(i);
+                //IF OUR POKEMANS IS FILTERED WE AINT SHOWIN HIM
+                if (!PokemonListLoader.getFilteredList().contains(new FilterItem(pokemons.getNumber()))) {
+                    //DO MATH
+                    Location temp = new Location("");
+
+                    temp.setLatitude(pokemons.getLatitude());
+                    temp.setLongitude(pokemons.getLongitude());
+
+                    double distance = location.distanceTo(temp);
+                    pokemons.setDistance(distance);
+
+                    //ADD OUR POKEMANS TO OUR OUT LIST
+                    listout.add(pokemons);
+                }
+            }
+        }
+
+        Gson gson = new Gson();
+        String json = gson.toJson(listout,new TypeToken<ArrayList<Pokemons>>() {}.getType());
+        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/pokemonlist");
+        putDataMapReq.getDataMap().putString("pokemons", json);
+        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
+        PendingResult<DataApi.DataItemResult> pendingResult =
+                Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -633,7 +717,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
-    public void onForceLogOutEvent(ForceLogOutEvent event) {
+    public void onForceLogOutEvent(ForceLogoutEvent event) {
         showToast(R.string.ERROR_LOGIN);
         logOut();
     }
@@ -653,6 +737,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onStart() {
         mGoogleApiClient.connect();
+        mGoogleWearApiClient.connect();
         super.onStart();
         EventBus.getDefault().register(this);
     }
@@ -661,6 +746,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onStop() {
         EventBus.getDefault().unregister(this);
         mGoogleApiClient.disconnect();
+        mGoogleWearApiClient.disconnect();
         super.onStop();
     }
 
@@ -980,6 +1066,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             });
 
             forceRefreshEvent(new ForceRefreshEvent());
+            sendPokemonListToWear();
         }
     }
     @OnLongClick(R.id.btnClear)
@@ -1002,6 +1089,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             });
             forceRefreshEvent(new ForceRefreshEvent());
+
+            sendPokemonListToWear();
         }
         return true;
     }
