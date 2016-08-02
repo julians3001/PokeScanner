@@ -78,6 +78,13 @@
         <meta-data
             android:name="com.crashlytics.ApiKey"
             android:value="c13e89c059c32c08041932f2d48b4e5bf1054b4a" />
+        <service android:name=".service.StartScanningListenerService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*"
+                    android:path="/start_scanning" />
+            </intent-filter>
+        </service>
 
     </application>
 

@@ -23,6 +23,7 @@ android {
     buildToolsVersion "24.0.1"
 
     defaultConfig {
+        resValue "string", "app_name", "PokéScanner"
         applicationId "com.pokescanner"
         minSdkVersion 23
         targetSdkVersion 24

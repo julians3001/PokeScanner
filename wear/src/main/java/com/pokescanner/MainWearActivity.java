@@ -27,12 +27,16 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -53,6 +57,7 @@ import rx.functions.Action1;
 public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnRefreshListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
         LocationListener {
 
+    private boolean MESSAGESENT = false;
     private final static int LOCATION_PERMISSION_REQUESTED = 1400;
     private TextView mTextView;
     ArrayList<Pokemons> pokemons;
@@ -83,7 +88,7 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
 
         final WatchViewStub stub = (WatchViewStub) findViewById(R.id.watch_view_stub);
 
-        getLocationPermission();
+
 
         stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
             @Override
@@ -130,8 +135,8 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
         super.onResume();
         mGoogleApiClient.connect();
         final WatchViewStub stub = (WatchViewStub) findViewById(R.id.watch_view_stub);
+        //getLocationPermission();
 
-        mStatusChecker.run();
 
         SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -201,7 +206,7 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
                 }
             });
         }
-
+        mStatusChecker.run();
 
     }
 
@@ -227,10 +232,25 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
 
     @Override
     public void onRefresh() {
+        if(MESSAGESENT){
+            MESSAGESENT = false;
+        } else {
+            MESSAGESENT = true;
+        }
         mSwipeRefreshLayout.setRefreshing(true);
-        refreshList();
+        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/start_scanning");
+        putDataMapReq.getDataMap().putBoolean("scan", true);
+        putDataMapReq.getDataMap().putBoolean("sent", MESSAGESENT);
+        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
+        PendingResult<DataApi.DataItemResult> pendingResult =
+                Wearable.DataApi.putDataItem(mGoogleApiClient, putDataReq);
 
+        Context context = getApplicationContext();
+        CharSequence text = "Start scanning...";
+        int duration = Toast.LENGTH_SHORT;
 
+        Toast toast = Toast.makeText(context, text, duration);
+        toast.show();
         mSwipeRefreshLayout.setRefreshing(false);
     }
 

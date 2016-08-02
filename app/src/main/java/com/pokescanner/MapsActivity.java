@@ -131,6 +131,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
     LocationManager locationManager;
+    public static MapsActivity instance;
+
+    public static boolean activityStarted = false;
 
     User user;
     Realm realm;
@@ -160,6 +163,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        instance = this;
+
         mGoogleWearApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
                     @Override
@@ -274,9 +279,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (SettingsUtil.getSettings(MapsActivity.this).isDrivingModeEnabled() && moveCameraToCurrentPosition(false)) {
                 scanPosition = getCurrentLocation();
             }
-            PowerManager mgr = (PowerManager)MapsActivity.this.getSystemService(Context.POWER_SERVICE);
-            PowerManager.WakeLock wakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyWakeLock");
-            wakeLock.acquire();
+
             if (scanPosition != null) {
                 scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
                 if (scanMap != null) {
@@ -648,18 +651,25 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onStart() {
-        mGoogleApiClient.connect();
-        mGoogleWearApiClient.connect();
         super.onStart();
-        EventBus.getDefault().register(this);
+        if(activityStarted==false) {
+            mGoogleApiClient.connect();
+            mGoogleWearApiClient.connect();
+
+            EventBus.getDefault().register(this);
+        }
+        activityStarted = true;
     }
 
     @Override
     public void onStop() {
+
         EventBus.getDefault().unregister(this);
         mGoogleApiClient.disconnect();
         //mGoogleWearApiClient.disconnect();
         super.onStop();
+
+        activityStarted = false;
     }
 
     @Override
