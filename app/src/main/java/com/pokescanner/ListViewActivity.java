@@ -11,6 +11,7 @@ import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ProgressBar;
@@ -19,6 +20,7 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.wearable.Wearable;
 import com.pokescanner.events.ScanCircleEvent;
 import com.pokescanner.helper.PokeDistanceSorter;
 import com.pokescanner.helper.PokemonListLoader;
@@ -64,10 +66,12 @@ public class ListViewActivity extends AppCompatActivity implements GoogleApiClie
     @BindView(R.id.progressBar)
     ProgressBar progressBar;
 
+    String TAG = "wear";
     ArrayList<Pokemons> pokemon = new ArrayList<>();
     ArrayList<Pokemons> pokemonRecycler = new ArrayList<>();
     LatLng cameraLocation;
     GoogleApiClient mGoogleApiClient;
+    GoogleApiClient mGoogleWearApiClient;
     Subscription pokemonSubscriber;
     RecyclerView.Adapter mAdapter;
     Realm realm;
@@ -77,6 +81,28 @@ public class ListViewActivity extends AppCompatActivity implements GoogleApiClie
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        mGoogleWearApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
+                    @Override
+                    public void onConnected(Bundle connectionHint) {
+                        Log.d(TAG, "onConnected: " + connectionHint);
+                        // Now you can use the Data Layer API
+                    }
+                    @Override
+                    public void onConnectionSuspended(int cause) {
+                        Log.d(TAG, "onConnectionSuspended: " + cause);
+                    }
+                })
+                .addOnConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
+                    @Override
+                    public void onConnectionFailed(ConnectionResult result) {
+                        Log.d(TAG, "onConnectionFailed: " + result);
+                    }
+                })
+                // Request access only to the Wearable API
+                .addApi(Wearable.API)
+                .build();
+
         MultiDex.install(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list_view);
