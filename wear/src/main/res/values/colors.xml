@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#F44336</color>
+    <color name="colorPrimaryTransparent">#80F44336</color>
+    <color name="colorPrimaryDark">#D32F2F</color>
+    <color name="colorAccent">#448AFF</color>
+    <color name="colorAccentTransparent">#80448AFF</color>
+    <color name="markerTextBackground">#BF757575</color>
+    <color name="black">#000000</color>
+    <color name="blackTransparent">#4D000000</color>
+    <color name="white">#FFFFFF</color>
+
+    <color name="MaterialGray">#CCF5F5F5</color>
+    <color name="IconDefault">#803F51B5</color>
+    <color name="IconPokemon">#993399ff</color>
+    <color name="IconPokeStop">#803F51B5</color>
+    <color name="IconPokeLure">#80673AB7</color>
+    <color name="GymRed">#80F44336</color>
+    <color name="GymBlue">#802196F3</color>
+    <color name="GymYellow">#80FFEB3B</color>
+    <color name="GymNeutral">#80FE9E9E</color>
+
+</resources>
