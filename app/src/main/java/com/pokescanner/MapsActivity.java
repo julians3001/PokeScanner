@@ -1,7 +1,6 @@
 package com.pokescanner;
 
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -53,6 +52,8 @@ import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
@@ -69,16 +70,14 @@ import com.pokescanner.events.ScanCircleEvent;
 import com.pokescanner.exceptions.NoCameraPositionException;
 import com.pokescanner.exceptions.NoMapException;
 import com.pokescanner.helper.CustomMapFragment;
+import com.pokescanner.helper.Generation;
 import com.pokescanner.helper.GymFilter;
-import com.pokescanner.helper.PokeDistanceSorter;
 import com.pokescanner.helper.PokemonListLoader;
 import com.pokescanner.loaders.MultiAccountLoader;
-import com.pokescanner.objects.FilterItem;
 import com.pokescanner.objects.Gym;
 import com.pokescanner.objects.PokeStop;
 import com.pokescanner.objects.Pokemons;
 import com.pokescanner.objects.User;
-import com.pokescanner.recycler.ListViewRecyclerAdapter;
 import com.pokescanner.settings.Settings;
 import com.pokescanner.settings.SettingsActivity;
 import com.pokescanner.utils.DrawableUtils;
@@ -93,7 +92,6 @@ import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -111,7 +109,6 @@ import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 
-import static com.pokescanner.helper.Generation.getCorners;
 import static com.pokescanner.helper.Generation.makeHexScanMap;
 
 
@@ -147,7 +144,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Map<PokeStop, Marker> pokestopMarkerMap = new HashMap<>();
     private ArrayList<Circle> circleArray = new ArrayList<>();
 
-    Circle mBoundingBox = null;
+    RelativeLayout rl;
+
+    Polygon mBoundingHexagon = null;
 
     String TAG = "wear";
 
@@ -486,65 +485,21 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (scanMap.size() > 0) {
                 removeBoundingBox();
 
-                LatLng loc = scanMap.get(0);
-
-                //To create a circle we need to get the corners
-                List<LatLng> corners = getCorners(scanMap);
-                //Once we have the corners lets create two locations
-                Location location = new Location("");
-                //set the latitude/longitude
-                location.setLatitude(corners.get(0).latitude);
-                location.setLongitude(corners.get(0).longitude);
-
-                Location location1 = new Location("");
-                //set the laditude/longitude
-                location1.setLatitude(loc.latitude);
-                location1.setLongitude(loc.longitude);
-
-                float distance = location.distanceTo(location1);
-
-                mBoundingBox = mMap.addCircle(new CircleOptions()
-                        .center(loc)
-                        .strokeColor(Color.parseColor("#80d22d2d"))
-                        .radius(distance));
-            }
-        } else {
-            LatLng currentCameraPos = null;
-            try {
-                currentCameraPos = getCameraLocation();
-
-                if (currentCameraPos != null) {
-
-                    removeBoundingBox();
-
-                    int scanDist = Settings.get(this).getScanValue();
-
-                    LatLng center = currentCameraPos;
-
-                    if (SettingsUtil.getSettings(this).isDrivingModeEnabled()) {
-                        LatLng latLng = getCurrentLocation();
-                        if (latLng != null) {
-                            center = new LatLng(latLng.latitude, latLng.longitude);
-                        }
-                    }
-
-                    mBoundingBox = mMap.addCircle(new CircleOptions()
-                            .center(center)
-                            .radius(scanDist * 100)
-                            .strokeWidth(5)
-                            .strokeColor(Color.parseColor("#80d22d2d")));
+                List<LatLng> boundingPoints = Generation.getCorners(scanMap);
+                PolygonOptions polygonOptions = new PolygonOptions();
+                for (LatLng latLng: boundingPoints){
+                    polygonOptions.add(latLng);
                 }
-            } catch (NoMapException e) {
-                e.printStackTrace();
-            } catch (NoCameraPositionException e) {
-                e.printStackTrace();
+                polygonOptions.strokeColor(Color.parseColor("#80d22d2d"));
+
+                mBoundingHexagon = mMap.addPolygon(polygonOptions);
             }
         }
     }
 
     public void removeBoundingBox() {
-        if (mBoundingBox != null)
-            mBoundingBox.remove();
+        if (mBoundingHexagon != null)
+            mBoundingHexagon.remove();
     }
 
     public void removeCircleArray() {
@@ -743,90 +698,25 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @OnClick(R.id.btnListMode)
     public void listModeDialog() {
         floatingActionMenu.close(false);
-        //CREATE TWO LIST (THIS IS A GHETTO SOLUTION BOYS)
-        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
-        ArrayList<Pokemons> listout = new ArrayList<>();
+        Intent listViewActivity = new Intent(this, ListViewActivity.class);
+        try {
+            LatLng cameraLocation = getCameraLocation();
 
-        LatLng latlng = getCurrentLocation();
+            if (cameraLocation != null) {
+                double[] locationOut = new double[2];
+                locationOut[0] = cameraLocation.latitude;
+                locationOut[1] = cameraLocation.longitude;
 
-        if (latlng == null) {
-            try {
-                latlng = getCameraLocation();
-            } catch (NoMapException e) {
-                e.printStackTrace();
-            } catch (NoCameraPositionException e) {
-                e.printStackTrace();
+                listViewActivity.putExtra("cameraLocation",locationOut);
+                startActivity(listViewActivity);
             }
-        }
-
-        if (latlng != null) {
-            Location location = new Location("");
-            location.setLatitude(latlng.latitude);
-            location.setLongitude(latlng.longitude);
-            //Write distance to pokemons
-            for (int i = 0; i < pokelist.size(); i++) {
-                Pokemons pokemons = pokelist.get(i);
-                //IF OUR POKEMANS IS FILTERED WE AINT SHOWIN HIM
-                if (!PokemonListLoader.getFilteredList().contains(new FilterItem(pokemons.getNumber()))) {
-                    //DO MATH
-                    Location temp = new Location("");
-
-                    temp.setLatitude(pokemons.getLatitude());
-                    temp.setLongitude(pokemons.getLongitude());
-
-                    double distance = location.distanceTo(temp);
-                    pokemons.setDistance(distance);
-
-                    //ADD OUR POKEMANS TO OUR OUT LIST
-                    listout.add(pokemons);
-                }
-            }
-        }
-
-        Collections.sort(listout,new PokeDistanceSorter());
-
-        if (listout.size() > 0) {
-            LayoutInflater inflater = getLayoutInflater();
-            final View dialoglayout = inflater.inflate(R.layout.dialog_list_view, null);
-            final AlertDialog builder = new AlertDialog.Builder(this).create();
-            builder.setView(dialoglayout);
-
-
-            RecyclerView recyclerView = (RecyclerView) dialoglayout.findViewById(R.id.recyclerListView);
-            recyclerView.setHasFixedSize(true);
-            RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(this);
-            recyclerView.setLayoutManager(mLayoutManager);
-
-            RecyclerView.Adapter mAdapter = new ListViewRecyclerAdapter(listout, new ListViewRecyclerAdapter.OnClickListener() {
-                @Override
-                public void onClick(Pokemons pokemons) {
-                    if (mMap != null) {
-                        LatLng pos = new LatLng(pokemons.getLatitude(), pokemons.getLongitude());
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pos, 20));
-                        builder.dismiss();
-                    }
-                }
-            });
-
-            recyclerView.setAdapter(mAdapter);
-
-            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialogInterface) {
-                    LIST_MODE = false;
-                }
-            });
-
-            builder.show();
-            LIST_MODE = true;
-
-            //Were going to clear the map to reduce lag
-            pokemonsMarkerMap = new ArrayMap<Pokemons, Marker>();
-            pokestopMarkerMap = new ArrayMap<PokeStop, Marker>();
-            gymMarkerMap = new ArrayMap<Gym, Marker>();
-            mMap.clear();
+        } catch (NoMapException e) {
+            e.printStackTrace();
+        } catch (NoCameraPositionException e) {
+            e.printStackTrace();
         }
     }
+
     @OnClick(R.id.btnAddressSearch)
     public void searchAddressDialog() {
         LayoutInflater inflater = getLayoutInflater();
@@ -887,6 +777,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         }
         floatingActionMenu.close(true);
+    }
+    @OnClick(R.id.btnDrivingMode)
+    public void startDrivingMode() {
+        floatingActionMenu.close(true);
+        Intent drivingModeIntent = new Intent(this,DrivingModeActivity.class);
+        startActivity(drivingModeIntent);
     }
     @OnClick(R.id.btnCenterCamera)
     public void onLocateMeClick() {
@@ -991,7 +887,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         LatLng GPS_LOCATION = getCurrentLocation();
         if (GPS_LOCATION != null) {
             if (mMap != null) {
-                if (zoom || scanPosition) {
+                if (zoom || Settings.get(this).isDrivingModeEnabled()) {
                     this.mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(GPS_LOCATION,15));
                 } else {
                     this.mMap.animateCamera(CameraUpdateFactory.newLatLng(GPS_LOCATION));
