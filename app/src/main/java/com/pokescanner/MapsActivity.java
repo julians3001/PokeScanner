@@ -61,6 +61,7 @@ import com.google.android.gms.wearable.Wearable;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.pokescanner.events.ForceLogOutEvent;
+import com.pokescanner.events.ForceLogoutEvent;
 import com.pokescanner.events.ForceRefreshEvent;
 import com.pokescanner.events.InterruptedExecptionEvent;
 import com.pokescanner.events.LoginFailedExceptionEvent;
@@ -262,6 +263,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else {
             //Progress Bar Related Stuff
             pos = 1;
+            int SERVER_REFRESH_RATE = Settings.get(this).getServerRefresh();
+
+            System.out.println(SERVER_REFRESH_RATE);
+
             progressBar.setProgress(0);
             int scanValue = Settings.get(this).getScanValue();
             showProgressbar(true);
@@ -286,7 +291,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //Pull our users from the realm
                     ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
 
-                    MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY);
+                    MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
                     //Set our map
                     MultiAccountLoader.setScanMap(scanMap);
                     //Set our users
@@ -371,10 +376,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (mMap != null) {
                 LatLngBounds curScreen = mMap.getProjection().getVisibleRegion().latLngBounds;
                 createMapObjects();
-
-                //If in driving mode, move camera to current location
-                if (SettingsUtil.getSettings(MapsActivity.this).isDrivingModeEnabled())
-                    moveCameraToCurrentPosition(false);
 
                 //Load our Pokemon Array
                 ArrayList<Pokemons> pokemons = new ArrayList<Pokemons>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
@@ -584,7 +585,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (event.pos != null)
         {
             CircleOptions circleOptions = new CircleOptions()
-                    .radius(70)
+                    .radius(80)
                     .strokeWidth(0)
                     .fillColor(ResourcesCompat.getColor(getResources(),R.color.colorPrimaryTransparent,null))
                     .center(event.pos);
@@ -632,7 +633,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
-    public void onForceLogOutEvent(ForceLogOutEvent event) {
+    public void onForceLogOutEvent(ForceLogoutEvent event) {
         showToast(R.string.ERROR_LOGIN);
         logOut();
     }
