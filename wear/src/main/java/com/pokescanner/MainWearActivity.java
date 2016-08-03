@@ -17,7 +17,6 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.wearable.view.WatchViewStub;
-import android.support.wearable.view.WearableListView;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -25,15 +24,13 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.github.clans.fab.FloatingActionButton;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
@@ -42,22 +39,17 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.pokescanner.ListViewHelper.ArrayAdapterList;
 import com.pokescanner.objects.Pokemons;
-import com.pokescanner.utils.PermissionUtils;
-import com.pokescanner.utils.SettingsUtil;
 
 import java.util.ArrayList;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
-import rx.Observable;
-import rx.Subscription;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Action1;
+import com.github.clans.fab.FloatingActionMenu;
 
 public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnRefreshListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
         LocationListener {
 
-    private boolean MESSAGESENT = false;
+    private int MESSAGESENTSCAN = 0;
+    private int MESSAGESENTCLEAN = 0;
     private final static int LOCATION_PERMISSION_REQUESTED = 1400;
     private TextView mTextView;
     ArrayList<Pokemons> pokemons;
@@ -70,6 +62,10 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
     private GoogleApiClient mGoogleApiClient;
     String TAG = "GPSWEAR";
     Location location;
+    FloatingActionMenu floatingMenu;
+    FloatingActionButton buttonStartScan;
+    FloatingActionButton buttonStopScan;
+    FloatingActionButton buttonClear;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,16 +89,24 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
         stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
             @Override
             public void onLayoutInflated(WatchViewStub stub) {
-                /*adapter = new ArrayAdapterList(MainWearActivity.this, R.layout.recycler_list_view, pokemons);
 
-                ListView listViewItems = (ListView) findViewById(R.id.listview);
-                listViewItems.setAdapter(adapter);
-                listViewItems.setEmptyView(findViewById(R.id.empty_list_view));*/
+
 
 
             }
         });
     }
+
+    public void onStartButtonClicked(View view){
+        floatingMenu.close(true);
+        sendScanStartStopMessageToPhone(true);
+    }
+
+    public void onCleanButtonClicked(View view){
+        floatingMenu.close(true);
+        sendCleanMessageToPhone();
+    }
+
 
     Runnable mStatusChecker = new Runnable() {
         @Override
@@ -169,43 +173,25 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
             }
         }
 
-        if (pokemonsNotExpired == null) {
+
 
             stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
                 @Override
                 public void onLayoutInflated(WatchViewStub stub) {
-                    setListView();
-
+                    if(pokemonsNotExpired!=null){
+                        setListView();
+                    }
+                    floatingMenu = (FloatingActionMenu) findViewById(R.id.floatActionMenu);
+                    buttonStartScan = (FloatingActionButton) findViewById(R.id.btnStartScan);
+                    buttonStopScan = (FloatingActionButton) findViewById(R.id.btnStopScan);
+                    buttonClear = (FloatingActionButton) findViewById(R.id.btnClean);
                     mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swiperefresh);
                     mSwipeRefreshLayout.setOnRefreshListener(MainWearActivity.this);
 
 
                 }
             });
-            return;
-        }
-        if (pokemonsNotExpired.size() > 0) {
-            stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
 
-                @Override
-                public void onLayoutInflated(WatchViewStub watchViewStub) {
-                    setListView();
-
-                    mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swiperefresh);
-                    mSwipeRefreshLayout.setOnRefreshListener(MainWearActivity.this);
-                }
-            });
-        } else {
-            stub.setOnLayoutInflatedListener(new WatchViewStub.OnLayoutInflatedListener() {
-                @Override
-                public void onLayoutInflated(WatchViewStub stub) {
-                   setListView();
-
-                    mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swiperefresh);
-                    mSwipeRefreshLayout.setOnRefreshListener(MainWearActivity.this);
-                }
-            });
-        }
         mStatusChecker.run();
 
     }
@@ -232,15 +218,17 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
 
     @Override
     public void onRefresh() {
-        if(MESSAGESENT){
-            MESSAGESENT = false;
-        } else {
-            MESSAGESENT = true;
-        }
+
         mSwipeRefreshLayout.setRefreshing(true);
+        sendScanStartStopMessageToPhone(true);
+        mSwipeRefreshLayout.setRefreshing(false);
+    }
+
+    public void sendScanStartStopMessageToPhone(boolean scan){
+
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/start_scanning");
-        putDataMapReq.getDataMap().putBoolean("scan", true);
-        putDataMapReq.getDataMap().putBoolean("sent", MESSAGESENT);
+        putDataMapReq.getDataMap().putBoolean("scan", scan);
+        putDataMapReq.getDataMap().putInt("sent", MESSAGESENTSCAN++);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         PendingResult<DataApi.DataItemResult> pendingResult =
                 Wearable.DataApi.putDataItem(mGoogleApiClient, putDataReq);
@@ -251,7 +239,24 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
 
         Toast toast = Toast.makeText(context, text, duration);
         toast.show();
-        mSwipeRefreshLayout.setRefreshing(false);
+    }
+
+    public void sendCleanMessageToPhone(){
+
+
+        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/start_cleaning");
+        putDataMapReq.getDataMap().putBoolean("clean", true);
+        putDataMapReq.getDataMap().putInt("sent", MESSAGESENTCLEAN++);
+        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
+        PendingResult<DataApi.DataItemResult> pendingResult =
+                Wearable.DataApi.putDataItem(mGoogleApiClient, putDataReq);
+
+        Context context = getApplicationContext();
+        CharSequence text = "Start cleaning...";
+        int duration = Toast.LENGTH_SHORT;
+
+        Toast toast = Toast.makeText(context, text, duration);
+        toast.show();
     }
 
     public void refreshList() {

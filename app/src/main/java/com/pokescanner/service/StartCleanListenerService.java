@@ -1,10 +1,6 @@
 package com.pokescanner.service;
 
 import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.location.Location;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -21,24 +17,15 @@ import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
 import com.google.android.gms.wearable.WearableListenerService;
 import com.pokescanner.MapsActivity;
-import com.pokescanner.SplashScreenActivity;
-import com.pokescanner.loaders.MultiAccountLoader;
-import com.pokescanner.objects.User;
-import com.pokescanner.settings.Settings;
-import com.pokescanner.utils.PermissionUtils;
-import com.pokescanner.utils.UiUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import static com.pokescanner.helper.Generation.makeHexScanMap;
 
 /**
  * Created by Julian on 02.08.2016.
  */
-public class StartScanningListenerService extends WearableListenerService {
+public class StartCleanListenerService extends WearableListenerService {
 
     private GoogleApiClient mGoogleApiClient;
     List<LatLng> scanMap = new ArrayList<>();
@@ -78,10 +65,10 @@ public class StartScanningListenerService extends WearableListenerService {
             if (event.getType() == DataEvent.TYPE_CHANGED) {
                 // DataItem changed
                 DataItem item = event.getDataItem();
-                if (item.getUri().getPath().compareTo("/start_scanning") == 0) {
+                if (item.getUri().getPath().compareTo("/start_cleaning") == 0) {
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
-                    if(dataMap.getBoolean("scan")){
-                        scanMap();
+                    if(dataMap.getBoolean("clean")){
+                        cleanMap();
                     }
 
                 }
@@ -92,9 +79,7 @@ public class StartScanningListenerService extends WearableListenerService {
     }
 
 
-
-    private void scanMap() {
-
+    private void cleanMap() {
         final MapsActivity mapsActivity = MapsActivity.instance;
 
         if (mapsActivity != null) {
@@ -106,16 +91,9 @@ public class StartScanningListenerService extends WearableListenerService {
 
                         mapsActivity.onStart();
                     }
-                    mapsActivity.PokeScan();
+                    mapsActivity.cleanPokemon();
                 }
             });
-        } else {
-            Intent dialogIntent = new Intent(this, MapsActivity.class);
-            dialogIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            dialogIntent.putExtra("methodName","Pokescan");
-            startActivity(dialogIntent);
-
         }
     }
-
 }

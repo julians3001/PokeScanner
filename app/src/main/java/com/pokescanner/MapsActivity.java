@@ -1033,4 +1033,19 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         PendingResult<DataApi.DataItemResult> pendingResult =
                 Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);
     }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        Context context = getApplicationContext();
+        CharSequence text = "It worked!";
+        int duration = Toast.LENGTH_SHORT;
+
+        Toast toast = Toast.makeText(context, text, duration);
+        toast.show();
+        super.onNewIntent(intent);
+        if(intent.getStringExtra("methodName").equals("Pokescan")){
+
+            PokeScan();
+        }
+    }
 }

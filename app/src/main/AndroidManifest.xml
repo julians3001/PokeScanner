@@ -85,7 +85,20 @@
                     android:path="/start_scanning" />
             </intent-filter>
         </service>
-
+        <service android:name=".service.StartScanningListenerService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*"
+                    android:path="/start_scanning" />
+            </intent-filter>
+        </service>
+        <service android:name=".service.StartCleanListenerService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*"
+                    android:path="/start_cleaning" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
