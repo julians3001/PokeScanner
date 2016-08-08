@@ -60,7 +60,6 @@ import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.pokescanner.events.ForceLogOutEvent;
 import com.pokescanner.events.ForceLogoutEvent;
 import com.pokescanner.events.ForceRefreshEvent;
 import com.pokescanner.events.InterruptedExecptionEvent;
