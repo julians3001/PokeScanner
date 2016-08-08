@@ -6,6 +6,19 @@
     android:layout_height="match_parent"
     tools:context="com.pokescanner.MainWearActivity"
     tools:deviceIds="wear_round">
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:padding="6dp"
+        android:rotation="-90"
+        android:layout_centerInParent="true"
+        android:max="100"
+        android:progress="1"
+        android:progressDrawable="@drawable/circular_progress"
+        android:visibility="visible"
+        android:indeterminate="false" />
 
 
     <android.support.v4.widget.SwipeRefreshLayout

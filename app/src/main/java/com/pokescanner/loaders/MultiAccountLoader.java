@@ -1,5 +1,7 @@
 package com.pokescanner.loaders;
 
+import android.content.Context;
+
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.maps.model.LatLng;
 import com.pokescanner.helper.MyPartition;
@@ -18,6 +20,7 @@ public class MultiAccountLoader {
     static private ArrayList<User> users;
     static private int SLEEP_TIME;
     static private GoogleApiClient mGoogleApiClient;
+    static private Context context;
 
     static public void startThreads() {
         scanMaps = new ArrayList<>();
@@ -36,7 +39,7 @@ public class MultiAccountLoader {
         for (int i = 0;i<scanMaps.size();i++) {
             List<LatLng> tempMap = scanMaps.get(i);
             User tempUser = users.get(i);
-            threads.add(new ObjectLoaderPTC(tempUser,tempMap,SLEEP_TIME,i,mGoogleApiClient));
+            threads.add(new ObjectLoaderPTC(tempUser,tempMap,SLEEP_TIME,i,mGoogleApiClient,context));
         }
 
         for (Thread thread: threads) {
@@ -54,6 +57,10 @@ public class MultiAccountLoader {
 
     static public void setmGoogleApiClient(GoogleApiClient mGoogleApiClient){
         MultiAccountLoader.mGoogleApiClient = mGoogleApiClient;
+    }
+
+    static public void setContext(Context context){
+        MultiAccountLoader.context = context;
     }
 
     static public void setScanMap(List<LatLng> scanMap) {

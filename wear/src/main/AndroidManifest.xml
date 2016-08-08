@@ -25,7 +25,14 @@
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
                 <data android:scheme="wear" android:host="*"
-                    android:path="/pokemonlist" />
+                    android:path="/pokemonlist"/>
+            </intent-filter>
+        </service>
+        <service android:name=".StartStopListenerService">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*"
+                    android:path="/startstopscan"/>
             </intent-filter>
         </service>
         <meta-data

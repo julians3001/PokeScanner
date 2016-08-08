@@ -21,6 +21,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -66,6 +67,7 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
     FloatingActionButton buttonStartScan;
     FloatingActionButton buttonStopScan;
     FloatingActionButton buttonClear;
+    ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -187,7 +189,7 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
                     buttonClear = (FloatingActionButton) findViewById(R.id.btnClean);
                     mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swiperefresh);
                     mSwipeRefreshLayout.setOnRefreshListener(MainWearActivity.this);
-
+                    progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
                 }
             });
@@ -291,7 +293,21 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
                 pokemonsNotExpired.add(pokemons.get(i));
             }
         }
-
+        if(progressBar!=null){
+            int pos = mPrefs.getInt("progressbar",1);
+            int scanmapsize = mPrefs.getInt("scanmapsize",1);
+            boolean scanstatus = mPrefs.getBoolean("scanstatus", false);
+            if(scanstatus){
+                progressBar.setVisibility(View.VISIBLE);
+                float progress = (float) (pos-1) * 100 / scanmapsize;
+                progressBar.setProgress((int) progress);
+                if((int) progress == 100) {
+                    progressBar.setVisibility(View.INVISIBLE);
+                }
+            } else {
+                progressBar.setVisibility(View.INVISIBLE);
+            }
+        }
 
         if (adapter != null) {
             adapter.setNotifyOnChange(false);

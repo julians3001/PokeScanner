@@ -1,5 +1,9 @@
 package com.pokescanner.loaders;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
+
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.maps.model.LatLng;
@@ -46,13 +50,16 @@ public class ObjectLoaderPTC extends Thread {
     private Realm realm;
     int position;
     GoogleApiClient mGoogleWearApiClient;
+    Context context;
+    int progressBar;
 
-    public ObjectLoaderPTC(User user, List<LatLng> scanMap, int SLEEP_TIME, int pos, GoogleApiClient mGoogleWearApiClient) {
+    public ObjectLoaderPTC(User user, List<LatLng> scanMap, int SLEEP_TIME, int pos, GoogleApiClient mGoogleWearApiClient, Context context) {
         this.user = user;
         this.scanMap = scanMap;
         this.SLEEP_TIME = SLEEP_TIME;
         this.position = pos;
         this.mGoogleWearApiClient = mGoogleWearApiClient;
+        this.context = context;
     }
 
     @Override
@@ -104,6 +111,12 @@ public class ObjectLoaderPTC extends Thread {
                                 }
                             });
 
+                            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
+                            SharedPreferences.Editor prefsEditor = mPrefs.edit();
+                            progressBar = mPrefs.getInt("progressbar",0);
+                            progressBar++;
+                            prefsEditor.putInt("progressbar",progressBar);
+                            prefsEditor.commit();
 
                             sendPokemonListToWear();
                             realm.close();
@@ -143,6 +156,7 @@ public class ObjectLoaderPTC extends Thread {
         String json = gson.toJson(listout,new TypeToken<ArrayList<Pokemons>>() {}.getType());
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/pokemonlist");
         putDataMapReq.getDataMap().putString("pokemons", json);
+        putDataMapReq.getDataMap().putInt("progressbar",progressBar);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         PendingResult<DataApi.DataItemResult> pendingResult =
                 Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);

@@ -2,6 +2,7 @@ package com.pokescanner;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.location.Address;
@@ -13,6 +14,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.os.Vibrator;
+import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.multidex.MultiDex;
 import android.support.v4.content.ContextCompat;
@@ -259,7 +261,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void PokeScan() {
         if (SCANNING_STATUS) {
             stopPokeScan();
+            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+            SharedPreferences.Editor prefsEditor = mPrefs.edit();
+            prefsEditor.putInt("progressbar",1);
+            prefsEditor.commit();
+
+            StartStopSendToWear(false, 1);
         } else {
+            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+            SharedPreferences.Editor prefsEditor = mPrefs.edit();
+            prefsEditor.putInt("progressbar",1);
+            prefsEditor.commit();
             //Progress Bar Related Stuff
             pos = 1;
             int SERVER_REFRESH_RATE = Settings.get(this).getServerRefresh();
@@ -297,8 +309,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
+                    //Set Context
+                    MultiAccountLoader.setContext(this);
                     //Begin our threads???
                     MultiAccountLoader.startThreads();
+                    StartStopSendToWear(true, scanMap.size());
                 } else {
                     showToast(R.string.SCAN_FAILED);
                     showProgressbar(false);
@@ -589,8 +604,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     .fillColor(ResourcesCompat.getColor(getResources(),R.color.colorPrimaryTransparent,null))
                     .center(event.pos);
             circleArray.add(mMap.addCircle(circleOptions));
+            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+            int iprogressBar = mPrefs.getInt("progressbar",1);
 
-            float progress = (float) pos++ * 100 / scanMap.size();
+            float progress = (float) iprogressBar * 100 / scanMap.size();
             progressBar.setProgress((int) progress);
             if((int) progress == 100) {
                 showProgressbar(false);
@@ -1029,6 +1046,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         String json = gson.toJson(listout,new TypeToken<ArrayList<Pokemons>>() {}.getType());
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/pokemonlist");
         putDataMapReq.getDataMap().putString("pokemons", json);
+        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
+        PendingResult<DataApi.DataItemResult> pendingResult =
+                Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);
+    }
+
+    private void StartStopSendToWear(boolean scanstatus, int scanmapsize){
+
+        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/startstopscan");
+        putDataMapReq.getDataMap().putBoolean("scanstatus", scanstatus);
+        putDataMapReq.getDataMap().putInt("scanmapsize", scanmapsize);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         PendingResult<DataApi.DataItemResult> pendingResult =
                 Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);

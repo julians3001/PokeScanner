@@ -95,6 +95,10 @@ public class StartScanningListenerService extends WearableListenerService {
 
     private void scanMap() {
 
+       final Intent launchIntent = getPackageManager().getLaunchIntentForPackage("com.pokescanner");
+
+
+
         final MapsActivity mapsActivity = MapsActivity.instance;
 
         if (mapsActivity != null) {
@@ -104,16 +108,21 @@ public class StartScanningListenerService extends WearableListenerService {
                 public void run() {
                     if(!mapsActivity.activityStarted){
 
-                        mapsActivity.onStart();
+                        if (launchIntent != null) {
+                            startActivity(launchIntent);//null pointer check in case package name was not found
+                        }
                     }
                     mapsActivity.PokeScan();
                 }
             });
         } else {
-            Intent dialogIntent = new Intent(this, MapsActivity.class);
+            if (launchIntent != null) {
+                startActivity(launchIntent);//null pointer check in case package name was not found
+            }
+            /*Intent dialogIntent = new Intent(this, MapsActivity.class);
             dialogIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             dialogIntent.putExtra("methodName","Pokescan");
-            startActivity(dialogIntent);
+            startActivity(dialogIntent);*/
 
         }
     }

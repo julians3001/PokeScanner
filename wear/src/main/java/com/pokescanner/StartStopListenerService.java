@@ -1,11 +1,9 @@
 package com.pokescanner;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -17,14 +15,11 @@ import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
 import com.google.android.gms.wearable.WearableListenerService;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class DataLayerListenerService extends WearableListenerService {
+public class StartStopListenerService extends WearableListenerService {
 
     private static final String TAG = "WearData";
 
@@ -54,18 +49,21 @@ public class DataLayerListenerService extends WearableListenerService {
             if (event.getType() == DataEvent.TYPE_CHANGED) {
                 // DataItem changed
                 DataItem item = event.getDataItem();
-                if (item.getUri().getPath().compareTo("/pokemonlist") == 0) {
+                if (item.getUri().getPath().compareTo("/startstopscan") == 0) {
                     DataMap dataMap = DataMapItem.fromDataItem(item).getDataMap();
                     Intent dialogIntent = new Intent(this, MainWearActivity.class);
                     dialogIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    String pokemons = dataMap.getString("pokemons");
-                    int progressbar = dataMap.getInt("progressbar");
+                    boolean scanstatus = dataMap.getBoolean("scanstatus");
+                    int scanmapsize = dataMap.getInt("scanmapsize");
 
                     SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
                     SharedPreferences.Editor prefsEditor = mPrefs.edit();
-                    prefsEditor.putString("pokemonlist", pokemons);
-                    prefsEditor.putInt("progressbar",progressbar);
+                    if(!scanstatus){
+                        prefsEditor.putInt("progressbar",1);
+                    }
+                    prefsEditor.putBoolean("scanstatus", scanstatus);
+                    prefsEditor.putInt("scanmapsize", scanmapsize);
                     prefsEditor.commit();
                 }
             } else if (event.getType() == DataEvent.TYPE_DELETED) {
