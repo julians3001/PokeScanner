@@ -112,6 +112,7 @@ public class StartScanningListenerService extends WearableListenerService {
                             startActivity(launchIntent);//null pointer check in case package name was not found
                         }
                     }
+                    mapsActivity.scanCurrentPosition = true;
                     mapsActivity.PokeScan();
                 }
             });

@@ -1,8 +1,13 @@
 package com.pokescanner;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.location.Address;
@@ -17,11 +22,13 @@ import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.multidex.MultiDex;
+import android.support.v4.app.TaskStackBuilder;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v4.util.ArrayMap;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.NotificationCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -153,6 +160,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     Polygon mBoundingHexagon = null;
 
+    public boolean scanCurrentPosition = false;
+
     String TAG = "wear";
 
     int pos = 1;
@@ -230,7 +239,29 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     .addApi(LocationServices.API)
                     .build();
         }
+
+
+        /*Intent launchIntent = new Intent(this, MapsActivity.class);
+        launchIntent.putExtra("methodname","pokescan");
+
+        PendingIntent pIntent = PendingIntent.getActivity(MapsActivity.this, 0,   launchIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+
+        Bitmap largeIcon = BitmapFactory.decodeResource(getResources(), R.drawable.icon);
+        NotificationCompat.Builder mBuilder =
+                (NotificationCompat.Builder) new NotificationCompat.Builder(this)
+                        .setSmallIcon(R.drawable.ic_track_changes_white_24dp)
+                        .setLargeIcon(largeIcon)
+                        .setContentTitle("Pokéscanner started")
+                        .setContentText("No Pokémon nearby!")
+                        .addAction(R.drawable.ic_refresh_white_36dp,"Start scan!", pIntent);
+        mBuilder.setContentIntent(pIntent).setOngoing(true);
+        NotificationManager mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        // mId allows you to update the notification later on.
+        mNotificationManager.notify(0, mBuilder.build());*/
     }
+
+
 
     public LatLng getCameraLocation() throws NoMapException, NoCameraPositionException {
         if (mMap != null) {
@@ -265,7 +296,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             SharedPreferences.Editor prefsEditor = mPrefs.edit();
             prefsEditor.putInt("progressbar",1);
             prefsEditor.commit();
-
+            scanCurrentPosition = false;
             StartStopSendToWear(false, 1);
         } else {
             SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -295,6 +326,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (SettingsUtil.getSettings(MapsActivity.this).isDrivingModeEnabled() && moveCameraToCurrentPosition(false)) {
                 scanPosition = getCurrentLocation();
             }
+
+            if(scanCurrentPosition){
+                scanPosition = getCurrentLocation();
+                scanCurrentPosition = false;
+            }
+
 
             if (scanPosition != null) {
                 scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
@@ -1063,15 +1100,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     protected void onNewIntent(Intent intent) {
-        Context context = getApplicationContext();
-        CharSequence text = "It worked!";
-        int duration = Toast.LENGTH_SHORT;
-
-        Toast toast = Toast.makeText(context, text, duration);
-        toast.show();
         super.onNewIntent(intent);
-        if(intent.getStringExtra("methodName").equals("Pokescan")){
-
+        System.out.println("OnNewIntent Started");
+        String methodName = intent.getStringExtra("methodname");
+        if (methodName==null){
+            return;
+        }
+        if(methodName.equals("pokescan")){
             PokeScan();
         }
     }
