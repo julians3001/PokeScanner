@@ -42,6 +42,7 @@ import com.pokescanner.ListViewHelper.ArrayAdapterList;
 import com.pokescanner.objects.Pokemons;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Locale;
 
 import com.github.clans.fab.FloatingActionMenu;
@@ -309,6 +310,8 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
             }
         }
 
+        sortPokemonlist();
+
         if (adapter != null) {
             adapter.setNotifyOnChange(false);
             adapter.clear();
@@ -317,6 +320,21 @@ public class MainWearActivity extends Activity implements SwipeRefreshLayout.OnR
         }
     }
 
+    private void sortPokemonlist() {
+        if(pokemonsNotExpired!=null){
+            Pokemons temp;
+            for(int i=1; i<pokemonsNotExpired.size(); i++) {
+                for(int j=0; j<pokemonsNotExpired.size()-i; j++) {
+                    if(pokemonsNotExpired.get(j).getDistance()>pokemonsNotExpired.get(j+1).getDistance()) {
+                        temp=pokemonsNotExpired.get(j);
+                        pokemonsNotExpired.set(j,pokemonsNotExpired.get(j+1));
+                        pokemonsNotExpired.set(j+1,temp);
+                    }
+
+                }
+            }
+        }
+    }
 
 
     @Override

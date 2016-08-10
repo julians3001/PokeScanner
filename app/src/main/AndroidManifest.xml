@@ -98,6 +98,9 @@
                     android:path="/start_cleaning" />
             </intent-filter>
         </service>
+        <service
+            android:name=".service.AutoScanService"
+            android:exported="false"/>
     </application>
 
 </manifest>

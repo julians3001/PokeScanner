@@ -1,5 +1,7 @@
 package com.pokescanner;
 
+import android.annotation.TargetApi;
+import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -15,6 +17,7 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
@@ -87,6 +90,7 @@ import com.pokescanner.objects.Gym;
 import com.pokescanner.objects.PokeStop;
 import com.pokescanner.objects.Pokemons;
 import com.pokescanner.objects.User;
+import com.pokescanner.service.AutoScanService;
 import com.pokescanner.settings.Settings;
 import com.pokescanner.settings.SettingsActivity;
 import com.pokescanner.utils.DrawableUtils;
@@ -137,6 +141,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     com.github.clans.fab.FloatingActionButton btnSataliteMode;
     @BindView(R.id.floatActionMenu)
     FloatingActionMenu floatingActionMenu;
+    @BindView(R.id.btnAutoScan)
+    ImageButton btnAutoScan;
+    boolean AutoScan = false;
+
 
 
     LocationManager locationManager;
@@ -196,6 +204,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 })
                 // Request access only to the Wearable API
                 .addApi(Wearable.API)
+                .addApi(LocationServices.API)
                 .build();
 
         MultiDex.install(this);
@@ -242,7 +251,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
         /*Intent launchIntent = new Intent(this, MapsActivity.class);
-        launchIntent.putExtra("methodname","pokescan");
 
         PendingIntent pIntent = PendingIntent.getActivity(MapsActivity.this, 0,   launchIntent, PendingIntent.FLAG_CANCEL_CURRENT);
 
@@ -287,6 +295,67 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         return null;
     }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    @OnClick(R.id.btnAutoScan)
+        public void AutoScan() {
+        if(MultiAccountLoader.autoScan){
+            MultiAccountLoader.autoScan = false;
+        } else {
+            MultiAccountLoader.autoScan = true;
+        }
+        if(MultiAccountLoader.autoScan) {
+            btnAutoScan.setBackground(getDrawable(R.drawable.circle_button_blue));
+            int SERVER_REFRESH_RATE = Settings.get(MapsActivity.this).getServerRefresh();
+            int scanValue = Settings.get(MapsActivity.this).getScanValue();
+
+            LatLng scanPosition = null;
+
+            scanPosition = getCurrentLocation();
+
+            progressBar.setProgress(0);
+            showProgressbar(true);
+
+            if (scanPosition != null) {
+                scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
+                if (scanMap != null) {
+                    //Pull our users from the realm
+                    ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
+
+                    MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
+                    //Set our map
+                    MultiAccountLoader.setScanMap(scanMap);
+                    //Set our users
+                    MultiAccountLoader.setUsers(users);
+                    //Set GoogleWearAPI
+                    MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
+                    //Set Context
+                    MultiAccountLoader.setContext(MapsActivity.this);
+                    //Begin our threads???
+
+
+                } else {
+                    showToast(R.string.SCAN_FAILED);
+                    showProgressbar(false);
+                }
+            } else {
+                showToast(R.string.SCAN_FAILED);
+                showProgressbar(false);
+            }
+            Intent intentService = new Intent(this, AutoScanService.class);
+            startService(intentService);
+            StartStopSendToWear(true, scanMap.size());
+        } else {
+            btnAutoScan.setBackground(getDrawable(R.drawable.circle_button));
+            Intent intentService = new Intent(this, AutoScanService.class);
+            stopService(intentService);
+            MultiAccountLoader.cancelAllThreads();
+            StartStopSendToWear(false, 1);
+        }
+    }
+
+
+
 
     @OnClick(R.id.btnSearch)
     public void PokeScan() {
@@ -419,7 +488,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     //Map related Functions
     public void refreshMap() {
 
-        if (!MultiAccountLoader.areThreadsRunning()) {
+        if (!MultiAccountLoader.areThreadsRunning()&&!MultiAccountLoader.autoScan) {
             showProgressbar(false);
         }
 
@@ -648,6 +717,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             progressBar.setProgress((int) progress);
             if((int) progress == 100) {
                 showProgressbar(false);
+            }
+            if((int) progress>=100){
+                removeCircleArray();
             }
 
         }
@@ -1098,16 +1170,5 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        System.out.println("OnNewIntent Started");
-        String methodName = intent.getStringExtra("methodname");
-        if (methodName==null){
-            return;
-        }
-        if(methodName.equals("pokescan")){
-            PokeScan();
-        }
-    }
+
 }

@@ -1,6 +1,8 @@
 package com.pokescanner.loaders;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.maps.model.LatLng;
@@ -16,11 +18,12 @@ import java.util.List;
 public class MultiAccountLoader {
     static private List<LatLng> scanMap;
     static private List<List<LatLng>> scanMaps;
-    static private ArrayList<Thread> threads;
+    static public ArrayList<Thread> threads;
     static private ArrayList<User> users;
     static private int SLEEP_TIME;
-    static private GoogleApiClient mGoogleApiClient;
+    static public GoogleApiClient mGoogleApiClient;
     static private Context context;
+    static public boolean autoScan = false;
 
     static public void startThreads() {
         scanMaps = new ArrayList<>();
@@ -34,6 +37,7 @@ public class MultiAccountLoader {
 
         scanMaps = MyPartition.partition(scanMap,scanMapSplitSize);
 
+
         System.out.println("Scan Map Size: " + scanMaps.size());
 
         for (int i = 0;i<scanMaps.size();i++) {
@@ -45,6 +49,10 @@ public class MultiAccountLoader {
         for (Thread thread: threads) {
             thread.start();
         }
+        SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor prefsEditor = mPrefs.edit();
+        prefsEditor.putInt("progressbar",1);
+        prefsEditor.commit();
     }
 
     static public void setSleepTime(int SLEEP_TIME) {

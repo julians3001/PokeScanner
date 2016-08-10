@@ -148,6 +148,17 @@
             android:layout_centerVertical="true"
             android:layout_toStartOf="@+id/btnSearch"
             android:layout_marginRight="5dp" />
+        <ImageButton
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:id="@+id/btnAutoScan"
+            android:background="@drawable/circle_button"
+            android:src="@drawable/ic_directions_car_white_24dp"
+            android:padding="2dp"
+            android:contentDescription="@string/settingsbutton"
+            android:layout_centerVertical="true"
+            android:layout_toStartOf="@+id/btnSearch"
+            android:layout_marginRight="60dp" />
 
     </RelativeLayout>
 

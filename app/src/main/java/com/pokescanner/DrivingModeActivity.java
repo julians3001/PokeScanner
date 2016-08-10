@@ -10,6 +10,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.multidex.MultiDex;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ProgressBar;
@@ -29,6 +30,7 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.wearable.Wearable;
 import com.pokescanner.events.ScanCircleEvent;
 import com.pokescanner.helper.Generation;
 import com.pokescanner.loaders.MultiAccountLoader;
@@ -76,6 +78,8 @@ public class DrivingModeActivity extends AppCompatActivity implements GoogleApiC
     GoogleApiClient mGoogleApiClient;
     Subscription pokemonSubscriber;
     Realm realm;
+    GoogleApiClient mGoogleWearApiClient;
+    String TAG = "wear";
 
     //Scan Map stuff
     Boolean autoScan = false;
@@ -84,6 +88,28 @@ public class DrivingModeActivity extends AppCompatActivity implements GoogleApiC
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        mGoogleWearApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
+                    @Override
+                    public void onConnected(Bundle connectionHint) {
+                        Log.d(TAG, "onConnected: " + connectionHint);
+                        // Now you can use the Data Layer API
+                    }
+                    @Override
+                    public void onConnectionSuspended(int cause) {
+                        Log.d(TAG, "onConnectionSuspended: " + cause);
+                    }
+                })
+                .addOnConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
+                    @Override
+                    public void onConnectionFailed(ConnectionResult result) {
+                        Log.d(TAG, "onConnectionFailed: " + result);
+                    }
+                })
+                // Request access only to the Wearable API
+                .addApi(Wearable.API)
+                .build();
+        mGoogleWearApiClient.connect();
         MultiDex.install(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_driving_mode);
@@ -140,6 +166,11 @@ public class DrivingModeActivity extends AppCompatActivity implements GoogleApiC
                         MultiAccountLoader.setScanMap(scanMap);
                         //Set our users
                         MultiAccountLoader.setUsers(users);
+
+                        //Set GoogleWearAPI
+                        MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
+                        //Set Context
+                        MultiAccountLoader.setContext(this);
                         //Begin our threads???
                         MultiAccountLoader.startThreads();
                     }
@@ -212,7 +243,7 @@ public class DrivingModeActivity extends AppCompatActivity implements GoogleApiC
             pokemonSubscriber.unsubscribe();
 
         //Using RX java we setup an interval to refresh the map
-        pokemonSubscriber = Observable.interval(1, TimeUnit.SECONDS, AndroidSchedulers.mainThread())
+        pokemonSubscriber = Observable.interval(11, TimeUnit.SECONDS, AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Long>() {
                     @Override
                     public void call(Long aLong) {
