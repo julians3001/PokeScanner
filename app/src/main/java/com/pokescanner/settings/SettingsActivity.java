@@ -6,7 +6,9 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
 import android.view.MenuItem;
 
+import com.pokescanner.BlacklistActivity;
 import com.pokescanner.LoginActivity;
+import com.pokescanner.PokemonNotificationActivity;
 import com.pokescanner.R;
 import com.pokescanner.multiboxing.MultiboxingActivity;
 import com.pokescanner.objects.Gym;
@@ -48,6 +50,8 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         {
             Intent i = new Intent(mContext, MultiboxingActivity.class);
             startActivity(i);
+        } else if(header.id == R.id.pokeNotification){
+            startActivity(new Intent(this, PokemonNotificationActivity.class));
         }
     }
 

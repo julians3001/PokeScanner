@@ -1,24 +1,33 @@
 package com.pokescanner.service;
 
 import android.app.IntentService;
+import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.support.annotation.Nullable;
+import android.support.v4.app.NotificationCompat;
 import android.widget.Toast;
 
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.LatLng;
 import com.pokescanner.MapsActivity;
+import com.pokescanner.R;
 import com.pokescanner.loaders.MultiAccountLoader;
+import com.pokescanner.objects.Pokemons;
 import com.pokescanner.settings.Settings;
 import com.pokescanner.utils.PermissionUtils;
+import com.pokescanner.utils.UiUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import io.fabric.sdk.android.services.concurrency.Priority;
+import io.realm.Realm;
 
 import static com.pokescanner.helper.Generation.makeHexScanMap;
 
@@ -28,6 +37,7 @@ import static com.pokescanner.helper.Generation.makeHexScanMap;
 public class AutoScanService extends IntentService{
 
     List<LatLng> scanMap = new ArrayList<>();
+    ArrayList<Pokemons> oldPokelist = new ArrayList<>();
 
     public AutoScanService(){
         super("PokeScanner");
@@ -65,6 +75,25 @@ public class AutoScanService extends IntentService{
                             e.printStackTrace();
                         }
                     }
+                    Realm realm = Realm.getDefaultInstance();
+                    ArrayList<Pokemons> pokemons = new ArrayList<Pokemons>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+
+                    for (Pokemons pokemon: pokemons
+                         ) {
+                        if(UiUtils.isPokemonNotification(pokemon)&&!oldPokelist.contains(pokemon)){
+                            oldPokelist.add(pokemon);
+                            NotificationCompat.Builder mBuilder =
+                                    new NotificationCompat.Builder(getApplicationContext())
+                                            .setSmallIcon(R.drawable.ic_refresh_white_36dp)
+                                            .setContentTitle("My notification")
+                                            .setVibrate(new long[]{100,100})
+                                            .setContentText(pokemon.getFormalName(getApplicationContext()));
+                            NotificationManager mNotificationManager =
+                                    (NotificationManager) getApplication().getSystemService(Context.NOTIFICATION_SERVICE);
+                            mNotificationManager.notify(pokemon.getResourceID(getApplicationContext()), mBuilder.build());
+                        }
+                    }
+
                     try {
                         Thread.sleep(11000);
                     } catch (InterruptedException e) {

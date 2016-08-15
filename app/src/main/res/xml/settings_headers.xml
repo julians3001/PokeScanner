@@ -61,6 +61,12 @@
     </header>
 
     <header
+        android:title="Pokémon Notification"
+        android:summary="Wähle Pokémon, die Benachrichtigungen auslösen"
+        android:id="@+id/pokeNotification">
+       </header>
+
+    <header
         android:title="@string/logout"
         android:id="@+id/logoutHeader"/>
 

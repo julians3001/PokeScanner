@@ -56,6 +56,7 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
     Preference scan_dialog,gym_filter,expiration_filter;
     Preference clear_pokemon,clear_gyms,clear_pokestops;
     Preference pokemon_blacklist, update,serve_refresh_rate_dialog;
+    Preference pokemon_notification;
     Realm realm;
     int scanValue;
     private Context mContext;
@@ -95,6 +96,8 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
                 }
         }
     }
+
+
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {

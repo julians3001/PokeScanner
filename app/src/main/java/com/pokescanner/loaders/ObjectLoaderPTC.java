@@ -1,8 +1,11 @@
 package com.pokescanner.loaders;
 
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
@@ -23,6 +26,7 @@ import com.pokegoapi.auth.PtcCredentialProvider;
 import com.pokegoapi.exceptions.AsyncPokemonGoException;
 import com.pokegoapi.exceptions.LoginFailedException;
 import com.pokegoapi.exceptions.RemoteServerException;
+import com.pokescanner.R;
 import com.pokescanner.events.ForceLogoutEvent;
 import com.pokescanner.events.ScanCircleEvent;
 import com.pokescanner.helper.PokemonListLoader;
@@ -31,6 +35,8 @@ import com.pokescanner.objects.Gym;
 import com.pokescanner.objects.PokeStop;
 import com.pokescanner.objects.Pokemons;
 import com.pokescanner.objects.User;
+import com.pokescanner.utils.DrawableUtils;
+import com.pokescanner.utils.UiUtils;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -100,8 +106,25 @@ public class ObjectLoaderPTC extends Thread {
                             realm.executeTransaction(new Realm.Transaction() {
                                 @Override
                                 public void execute(Realm realm) {
-                                    for (MapPokemonOuterClass.MapPokemon pokemonOut : collectionPokemon)
-                                        realm.copyToRealmOrUpdate(new Pokemons(pokemonOut));
+                                    for (MapPokemonOuterClass.MapPokemon pokemonOut : collectionPokemon){
+                                        Pokemons pokemon = new Pokemons(pokemonOut);
+
+                                        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+                                        realm.copyToRealmOrUpdate(pokemon);
+                                        if(UiUtils.isPokemonNotification(pokemon)&&!pokelist.contains(pokemon)){
+                                            Bitmap bitmap = DrawableUtils.getBitmapFromView(pokemon.getResourceID(context),"",context,DrawableUtils.PokemonType);
+                                            NotificationCompat.Builder mBuilder =
+                                                    new NotificationCompat.Builder(context)
+                                                            .setSmallIcon(R.drawable.ic_refresh_white_36dp)
+                                                            .setLargeIcon(bitmap)
+                                                            .setContentTitle("My notification")
+                                                            .setVibrate(new long[]{100,100})
+                                                            .setContentText(pokemon.getFormalName(context));
+                                            NotificationManager mNotificationManager =
+                                                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                                            mNotificationManager.notify(pokemon.getResourceID(context), mBuilder.build());
+                                        }
+                                    }
 
                                     for (FortDataOuterClass.FortData gymOut : collectionGyms)
                                         realm.copyToRealmOrUpdate(new Gym(gymOut));

@@ -13,6 +13,7 @@ import android.widget.TextView;
 
 import com.pokescanner.R;
 import com.pokescanner.objects.FilterItem;
+import com.pokescanner.objects.NotificationItem;
 import com.pokescanner.utils.SettingsUtil;
 
 /**
@@ -38,6 +39,33 @@ public class BlacklistViewHolder extends RecyclerView.ViewHolder {
     }
 
     public void bind(final FilterItem filterItem, final BlacklistRecyclerAdapter.onCheckedListener listener) {
+        checkBox.setOnCheckedChangeListener(null);
+
+        pokemonName.setText(filterItem.getName());
+        checkBox.setChecked(filterItem.isFiltered());
+
+        String uri;
+        int pokemonnumber = filterItem.getNumber();
+
+        if (SettingsUtil.getSettings(context).isShuffleIcons()) {
+            uri = "ps" + pokemonnumber;
+        }
+        else uri = "p" + pokemonnumber;
+
+        int resourceID = context.getResources().getIdentifier(uri, "drawable", context.getPackageName());
+        Bitmap bm = BitmapFactory.decodeResource(context.getResources(), resourceID);
+
+        imageFilterRow.setImageBitmap(bm);
+
+        checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                filterItem.setFiltered(b);
+                listener.onChecked(filterItem);
+            }
+        });
+    }
+    public void bind(final NotificationItem filterItem, final NotificationRecyclerAdapter.onCheckedListener listener) {
         checkBox.setOnCheckedChangeListener(null);
 
         pokemonName.setText(filterItem.getName());

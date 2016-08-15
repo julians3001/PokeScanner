@@ -62,6 +62,9 @@
             android:name=".BlacklistActivity"
             android:windowSoftInputMode="adjustPan|adjustResize"/>
         <activity
+            android:name=".PokemonNotificationActivity"
+            android:windowSoftInputMode="adjustPan|adjustResize"/>
+        <activity
             android:name=".MapsActivity"
             android:label="@string/title_activity_maps"
             android:launchMode="singleTop"/>

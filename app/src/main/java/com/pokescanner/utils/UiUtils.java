@@ -7,6 +7,7 @@ import android.widget.EditText;
 import com.pokescanner.helper.ExpirationFilter;
 import com.pokescanner.helper.PokemonListLoader;
 import com.pokescanner.objects.FilterItem;
+import com.pokescanner.objects.NotificationItem;
 import com.pokescanner.objects.Pokemons;
 import com.pokescanner.objects.User;
 import com.pokescanner.settings.Settings;
@@ -63,5 +64,9 @@ public class UiUtils {
     public static boolean isPokemonFiltered(int number) {
         //lol this is really long but it's simple and to the point
         return PokemonListLoader.getFilteredList().contains(new FilterItem(number));
+    }
+
+    public static boolean isPokemonNotification(Pokemons pokemons){
+        return PokemonListLoader.getNotificationList().contains(new NotificationItem(pokemons.getNumber()));
     }
 }
