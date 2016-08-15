@@ -1,7 +1,9 @@
 package com.pokescanner.loaders;
 
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.preference.PreferenceManager;
@@ -26,6 +28,7 @@ import com.pokegoapi.auth.PtcCredentialProvider;
 import com.pokegoapi.exceptions.AsyncPokemonGoException;
 import com.pokegoapi.exceptions.LoginFailedException;
 import com.pokegoapi.exceptions.RemoteServerException;
+import com.pokescanner.MapsActivity;
 import com.pokescanner.R;
 import com.pokescanner.events.ForceLogoutEvent;
 import com.pokescanner.events.ScanCircleEvent;
@@ -112,17 +115,29 @@ public class ObjectLoaderPTC extends Thread {
                                         ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
                                         realm.copyToRealmOrUpdate(pokemon);
                                         if(UiUtils.isPokemonNotification(pokemon)&&!pokelist.contains(pokemon)){
+
+                                            Intent launchIntent = new Intent(context, MapsActivity.class);
+                                            launchIntent.setAction(Long.toString(System.currentTimeMillis()));
+                                            launchIntent.putExtra("methodName","newPokemon");
+                                            Gson gson = new Gson();
+                                            String json = gson.toJson(pokemon,new TypeToken<Pokemons>() {}.getType());
+                                            launchIntent.putExtra("pokemon",json);
+                                            PendingIntent pIntent = PendingIntent.getActivity(context, 0,   launchIntent, PendingIntent.FLAG_ONE_SHOT);
+
                                             Bitmap bitmap = DrawableUtils.getBitmapFromView(pokemon.getResourceID(context),"",context,DrawableUtils.PokemonType);
                                             NotificationCompat.Builder mBuilder =
                                                     new NotificationCompat.Builder(context)
                                                             .setSmallIcon(R.drawable.ic_refresh_white_36dp)
                                                             .setLargeIcon(bitmap)
-                                                            .setContentTitle("My notification")
+                                                            .setContentTitle("New Pokémon nearby")
                                                             .setVibrate(new long[]{100,100})
-                                                            .setContentText(pokemon.getFormalName(context));
+                                                            .setContentIntent(pIntent)
+                                                            .setAutoCancel(true)
+                                                            .setContentText(pokemon.getFormalName(context)+" ("+DrawableUtils.getExpireTime(pokemon.getExpires())+")");
                                             NotificationManager mNotificationManager =
                                                     (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-                                            mNotificationManager.notify(pokemon.getResourceID(context), mBuilder.build());
+                                            if(pokemon.isExpired())
+                                                mNotificationManager.notify( (int) System.currentTimeMillis(), mBuilder.build());
                                         }
                                     }
 

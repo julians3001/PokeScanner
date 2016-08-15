@@ -881,6 +881,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             }
                         }
                     } catch (IOException e) {
+                        System.out.println("Address Search");
                         e.printStackTrace();
                     }
                 } else {
@@ -1044,6 +1045,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         return false;
     }
+
+    public void moveCameraToLocation(LatLng location){
+        if (mMap != null) {
+
+            this.mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 16));
+
+        }
+    }
     @OnClick(R.id.btnClear)
     public void cleanPokemon(){
         if (mMap != null) {
@@ -1170,5 +1179,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);
     }
 
-
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if(intent.getStringExtra("methodName").equals("newPokemon"))
+        {
+            Gson gson = new Gson();
+            Pokemons newPokemon = gson.fromJson(intent.getStringExtra("pokemon"), new TypeToken<Pokemons>() {
+            }.getType());
+            LatLng location = new LatLng(newPokemon.getLatitude(), newPokemon.getLongitude());
+            moveCameraToLocation(location);
+        }
+    }
 }

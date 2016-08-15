@@ -109,7 +109,7 @@ public class StartScanningListenerService extends WearableListenerService {
                     if(!mapsActivity.activityStarted){
 
                         if (launchIntent != null) {
-                            startActivity(launchIntent);//null pointer check in case package name was not found
+                            startActivity(launchIntent);
                         }
                     }
                     mapsActivity.scanCurrentPosition = true;
