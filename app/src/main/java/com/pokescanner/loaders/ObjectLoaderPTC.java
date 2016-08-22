@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 
@@ -134,6 +136,8 @@ public class ObjectLoaderPTC extends Thread {
                                                             .setContentIntent(pIntent)
                                                             .setAutoCancel(true)
                                                             .setContentText(pokemon.getFormalName(context)+" ("+DrawableUtils.getExpireTime(pokemon.getExpires())+")");
+                                            Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                                            mBuilder.setSound(alarmSound);
                                             NotificationManager mNotificationManager =
                                                     (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
                                             if(pokemon.isExpired())
@@ -164,12 +168,16 @@ public class ObjectLoaderPTC extends Thread {
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
+            System.out.println("ObjectLoader: " + user.getUsername());
         } catch (RemoteServerException e) {
             e.printStackTrace();
+            System.out.println("ObjectLoader: " + user.getUsername());
         } catch (LoginFailedException e) {
             e.printStackTrace();
+            System.out.println("ObjectLoader: " + user.getUsername());
         }catch (AsyncPokemonGoException e) {
             e.printStackTrace();
+            System.out.println("ObjectLoader: " + user.getUsername());
         }
     }
     private void sendPokemonListToWear(){

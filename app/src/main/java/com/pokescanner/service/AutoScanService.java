@@ -75,24 +75,7 @@ public class AutoScanService extends IntentService{
                             e.printStackTrace();
                         }
                     }
-                    Realm realm = Realm.getDefaultInstance();
-                    ArrayList<Pokemons> pokemons = new ArrayList<Pokemons>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
 
-                    for (Pokemons pokemon: pokemons
-                         ) {
-                        if(UiUtils.isPokemonNotification(pokemon)&&!oldPokelist.contains(pokemon)){
-                            oldPokelist.add(pokemon);
-                            NotificationCompat.Builder mBuilder =
-                                    new NotificationCompat.Builder(getApplicationContext())
-                                            .setSmallIcon(R.drawable.ic_refresh_white_36dp)
-                                            .setContentTitle("My notification")
-                                            .setVibrate(new long[]{100,100})
-                                            .setContentText(pokemon.getFormalName(getApplicationContext()));
-                            NotificationManager mNotificationManager =
-                                    (NotificationManager) getApplication().getSystemService(Context.NOTIFICATION_SERVICE);
-                            mNotificationManager.notify(pokemon.getResourceID(getApplicationContext()), mBuilder.build());
-                        }
-                    }
 
                     try {
                         Thread.sleep(11000);

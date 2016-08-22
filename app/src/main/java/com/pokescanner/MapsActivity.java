@@ -124,6 +124,8 @@ import rx.functions.Action1;
 
 import static com.pokescanner.helper.Generation.makeHexScanMap;
 
+//git clone --recursive -b Development https://github.com/Grover-c13/PokeGOAPI-Java.git && cd PokeGOAPI-Java && ./gradlew build
+
 
 public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnCameraChangeListener,
         OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks {
