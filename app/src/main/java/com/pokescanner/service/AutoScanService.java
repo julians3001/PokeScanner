@@ -78,7 +78,7 @@ public class AutoScanService extends IntentService{
 
 
                     try {
-                        Thread.sleep(11000);
+                        Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
