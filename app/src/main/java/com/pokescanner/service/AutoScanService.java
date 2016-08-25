@@ -44,21 +44,26 @@ public class AutoScanService extends IntentService{
     }
     @Override
     protected void onHandleIntent(Intent intent) {
+        final Intent incomingIntent = intent;
 
         new Thread(new Runnable() {
             @Override
             public void run() {
                 while(MultiAccountLoader.autoScan){
-                    LatLng scanPosition = getCurrentLocation();
-                    int scanValue = Settings.get(getApplicationContext()).getScanValue();
-                    if (scanPosition != null) {
-                        scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
-                        if (scanMap != null) {
-                            MultiAccountLoader.setScanMap(scanMap);
-                            MultiAccountLoader.startThreads();
-                        }
-                    }
 
+                    if(incomingIntent.getIntExtra("mode",-1)==0) {
+                        LatLng scanPosition = getCurrentLocation();
+                        int scanValue = Settings.get(getApplicationContext()).getScanValue();
+                        if (scanPosition != null) {
+                            scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
+                            if (scanMap != null) {
+                                MultiAccountLoader.setScanMap(scanMap);
+                                MultiAccountLoader.startThreads();
+                            }
+                        }
+                    } else {
+                        MultiAccountLoader.startThreads();
+                    }
                     Handler handler = new Handler(Looper.getMainLooper());
 
                     handler.post(new Runnable() {

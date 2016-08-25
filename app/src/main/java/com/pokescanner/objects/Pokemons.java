@@ -75,7 +75,7 @@ public class Pokemons  extends RealmObject{
                 .draggable(true)
                 .position(position);
         if(Settings.get(context).isUseOldMapMarker()){
-            pokeIcon.title(getName());
+            pokeIcon.title(getFormalName(context));
             pokeIcon.draggable(true);
             pokeIcon.snippet(context.getText(R.string.expires_in) + timeOut);
         }

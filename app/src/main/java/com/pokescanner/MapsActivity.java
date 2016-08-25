@@ -345,6 +345,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 showProgressbar(false);
             }
             Intent intentService = new Intent(this, AutoScanService.class);
+            intentService.putExtra("mode",0);
             startService(intentService);
             StartStopSendToWear(true, scanMap.size());
         } else {
@@ -354,6 +355,71 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             MultiAccountLoader.cancelAllThreads();
             StartStopSendToWear(false, 1);
         }
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    @OnLongClick(R.id.btnAutoScan)
+    public boolean AutoScanCamera() {
+        if(MultiAccountLoader.autoScan){
+            MultiAccountLoader.autoScan = false;
+        } else {
+            MultiAccountLoader.autoScan = true;
+        }
+        if(MultiAccountLoader.autoScan) {
+            btnAutoScan.setBackground(getDrawable(R.drawable.circle_button_green));
+            int SERVER_REFRESH_RATE = Settings.get(MapsActivity.this).getServerRefresh();
+            int scanValue = Settings.get(MapsActivity.this).getScanValue();
+
+            LatLng scanPosition = null;
+
+            try {
+                scanPosition = getCameraLocation();
+            } catch (NoMapException | NoCameraPositionException e) {
+                showToast(R.string.SCAN_FAILED);
+                e.printStackTrace();
+            }
+
+            progressBar.setProgress(0);
+            showProgressbar(true);
+
+            if (scanPosition != null) {
+                scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
+                if (scanMap != null) {
+                    //Pull our users from the realm
+                    ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
+
+                    MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
+                    //Set our map
+                    MultiAccountLoader.setScanMap(scanMap);
+                    //Set our users
+                    MultiAccountLoader.setUsers(users);
+                    //Set GoogleWearAPI
+                    MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
+                    //Set Context
+                    MultiAccountLoader.setContext(MapsActivity.this);
+                    //Begin our threads???
+
+
+                } else {
+                    showToast(R.string.SCAN_FAILED);
+                    showProgressbar(false);
+                }
+            } else {
+                showToast(R.string.SCAN_FAILED);
+                showProgressbar(false);
+            }
+            Intent intentService = new Intent(this, AutoScanService.class);
+            startService(intentService);
+            StartStopSendToWear(true, scanMap.size());
+        } else {
+            btnAutoScan.setBackground(getDrawable(R.drawable.circle_button));
+            Intent intentService = new Intent(this, AutoScanService.class);
+            stopService(intentService);
+            MultiAccountLoader.cancelAllThreads();
+            StartStopSendToWear(false, 1);
+        }
+
+        return true;
     }
 
 
