@@ -44,6 +44,8 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -86,6 +88,7 @@ import com.pokescanner.helper.Generation;
 import com.pokescanner.helper.GymFilter;
 import com.pokescanner.helper.PokemonListLoader;
 import com.pokescanner.loaders.MultiAccountLoader;
+import com.pokescanner.objects.FilterItem;
 import com.pokescanner.objects.Gym;
 import com.pokescanner.objects.PokeStop;
 import com.pokescanner.objects.Pokemons;
@@ -103,7 +106,12 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -145,6 +153,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     FloatingActionMenu floatingActionMenu;
     @BindView(R.id.btnAutoScan)
     ImageButton btnAutoScan;
+    @BindView(R.id.btnHeatMapMode)
+    ImageButton btnHeatMapMode;
     boolean AutoScan = false;
 
 
@@ -921,6 +931,47 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    @OnClick(R.id.btnHeatMapMode)
+    public void createHeatMap(){
+        floatingActionMenu.close(false);
+        /*File file = new File(getFilesDir(), "pokeList.txt");
+        FileInputStream fin = null;
+        try {
+            fin = new FileInputStream(file);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
+        String receiveString = "";
+        StringBuilder stringBuilder = new StringBuilder();
+*/
+        LayoutInflater inflater = getLayoutInflater();
+
+        final View dialoglayout = inflater.inflate(R.layout.dialog_radiogroup,null);
+        final AlertDialog builder = new AlertDialog.Builder(this).create();
+        builder.setView(dialoglayout);
+        RadioGroup radioGroup = (RadioGroup) dialoglayout.findViewById(R.id.radioGroupHeat);
+        try {
+            ArrayList<FilterItem> pokeList = PokemonListLoader.getPokelist(this);
+        String uri;
+        for(int i = 0;i<pokeList.size();i++){
+            RadioButton radioButton = new RadioButton(this);
+            radioButton.setText(pokeList.get(i).getFormalName(this));
+            if (SettingsUtil.getSettings(this).isShuffleIcons()) {
+                uri = "ps" + pokeList.get(i).getNumber();
+            }
+            else uri = "p" + pokeList.get(i).getNumber();
+
+            int resourceID = getResources().getIdentifier(uri, "drawable", getPackageName());
+            radioButton.setCompoundDrawablesWithIntrinsicBounds(null,null,ResourcesCompat.getDrawable(getResources(), resourceID, null),null);
+            radioGroup.addView(radioButton);
+        }
+        builder.show();} catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     @OnClick(R.id.btnAddressSearch)
     public void searchAddressDialog() {
         LayoutInflater inflater = getLayoutInflater();
@@ -983,17 +1034,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         floatingActionMenu.close(true);
     }
-    @OnClick(R.id.btnDrivingMode)
-    public void startDrivingMode() {
-        floatingActionMenu.close(true);
-        Intent drivingModeIntent = new Intent(this,DrivingModeActivity.class);
-        startActivity(drivingModeIntent);
-    }
-    @OnClick(R.id.btnCenterCamera)
-    public void onLocateMeClick() {
-        moveCameraToCurrentPosition(true);
-        floatingActionMenu.close(true);
-    }
+
+
     @Override
     @SuppressWarnings({"MissingPermission"})
     public void onMapReady(GoogleMap googleMap) {
@@ -1250,6 +1292,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if(intent.getStringExtra("methodName")==null)
+            return;
         if(intent.getStringExtra("methodName").equals("newPokemon"))
         {
             Gson gson = new Gson();

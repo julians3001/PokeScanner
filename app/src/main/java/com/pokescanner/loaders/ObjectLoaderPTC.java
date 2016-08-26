@@ -45,6 +45,10 @@ import com.pokescanner.utils.UiUtils;
 
 import org.greenrobot.eventbus.EventBus;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -63,6 +67,7 @@ public class ObjectLoaderPTC extends Thread {
     GoogleApiClient mGoogleWearApiClient;
     Context context;
     int progressBar;
+    ArrayList<Pokemons> listout;
 
     public ObjectLoaderPTC(User user, List<LatLng> scanMap, int SLEEP_TIME, int pos, GoogleApiClient mGoogleWearApiClient, Context context) {
         this.user = user;
@@ -102,6 +107,7 @@ public class ObjectLoaderPTC extends Thread {
                             Map map = go.getMap();
                             MapObjects event = map.getMapObjects();
                             final Collection<MapPokemonOuterClass.MapPokemon> collectionPokemon = event.getCatchablePokemons();
+
                             final Collection<FortDataOuterClass.FortData> collectionGyms = event.getGyms();
                             final Collection<Pokestop> collectionPokeStops = event.getPokestops();
 
@@ -113,7 +119,12 @@ public class ObjectLoaderPTC extends Thread {
                                 public void execute(Realm realm) {
                                     for (MapPokemonOuterClass.MapPokemon pokemonOut : collectionPokemon){
                                         Pokemons pokemon = new Pokemons(pokemonOut);
+                                        try {
 
+                                            savePokemonToFile(pokemon);
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
                                         ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
                                         realm.copyToRealmOrUpdate(pokemon);
                                         if(UiUtils.isPokemonNotification(pokemon)&&!pokelist.contains(pokemon)){
@@ -159,8 +170,10 @@ public class ObjectLoaderPTC extends Thread {
                             progressBar++;
                             prefsEditor.putInt("progressbar",progressBar);
                             prefsEditor.commit();
+                        
 
                             sendPokemonListToWear();
+
                             realm.close();
                             Thread.sleep(SLEEP_TIME);
                     }
@@ -180,9 +193,30 @@ public class ObjectLoaderPTC extends Thread {
             System.out.println("ObjectLoader: " + user.getUsername());
         }
     }
+
+    private void savePokemonToFile(Pokemons pokemons) throws IOException {
+
+
+        FileOutputStream fOut = context.openFileOutput("pokeList.txt",Context.MODE_APPEND);
+
+        Gson gson = new Gson();
+
+        try {
+            OutputStreamWriter myOutWriter =
+                    new OutputStreamWriter(fOut);
+            String json = gson.toJson(pokemons,new TypeToken<Pokemons>() {}.getType());
+            //System.out.println("User: " + user.getUsername()+ " Pokename: "+json);
+            myOutWriter.append(json);
+            myOutWriter.close();
+            fOut.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private void sendPokemonListToWear(){
         ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
-        ArrayList<Pokemons> listout = new ArrayList<>();
+        listout = new ArrayList<>();
 
 
 

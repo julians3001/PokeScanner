@@ -6,6 +6,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.pokescanner.objects.FilterItem;
 import com.pokescanner.objects.NotificationItem;
+import com.pokescanner.objects.Pokemons;
 import com.pokescanner.settings.Settings;
 
 import java.io.IOException;

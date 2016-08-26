@@ -57,10 +57,10 @@
             fab:fab_colorPressed="@color/colorAccent"
             fab:fab_colorRipple="@color/colorPrimaryDark" />
         <com.github.clans.fab.FloatingActionButton
-            android:id="@+id/btnDrivingMode"
+            android:id="@+id/btnHeatMapMode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_directions_car_white_24dp"
+            android:src="@drawable/bullseye"
             fab:fab_size="mini"
             fab:fab_colorNormal="@color/colorPrimary"
             fab:fab_colorPressed="@color/colorAccent"
