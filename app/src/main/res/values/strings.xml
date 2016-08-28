@@ -17,6 +17,8 @@
     <string name="select_all">Select All</string>
     <string name="pokemon_name">Pokémon Name</string>
 
+    <string name="noPokeHeat">No Pokémon in Heatmap</string>
+
     <string name="AUTH_FAILED">Bad Login Credentials</string>
     <string name="SERVER_FAILED">Servers not responding</string>
     <string name="ERROR_FILTERS">Error loading filters</string>

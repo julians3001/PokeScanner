@@ -206,7 +206,7 @@ public class ObjectLoaderPTC extends Thread {
                     new OutputStreamWriter(fOut);
             String json = gson.toJson(pokemons,new TypeToken<Pokemons>() {}.getType());
             //System.out.println("User: " + user.getUsername()+ " Pokename: "+json);
-            myOutWriter.append(json);
+            myOutWriter.append(json+"\n");
             myOutWriter.close();
             fOut.close();
         } catch (Exception e) {

@@ -1,17 +1,15 @@
 package com.pokescanner;
 
 import android.annotation.TargetApi;
-import android.app.IntentService;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -20,20 +18,15 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.PowerManager;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.multidex.MultiDex;
-import android.support.v4.app.TaskStackBuilder;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v4.util.ArrayMap;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.NotificationCompat;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -68,12 +61,16 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
+import com.google.android.gms.maps.model.TileOverlay;
+import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.maps.android.heatmaps.HeatmapTileProvider;
 import com.pokescanner.events.ForceLogoutEvent;
 import com.pokescanner.events.ForceRefreshEvent;
 import com.pokescanner.events.InterruptedExecptionEvent;
@@ -112,6 +109,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -131,6 +129,7 @@ import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 
 import static com.pokescanner.helper.Generation.makeHexScanMap;
+
 
 //git clone --recursive -b Development https://github.com/Grover-c13/PokeGOAPI-Java.git && cd PokeGOAPI-Java && ./gradlew build
 
@@ -158,14 +157,25 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     boolean AutoScan = false;
 
 
+    public AlertDialog builderHeatMap;
+
 
     LocationManager locationManager;
     public static MapsActivity instance;
 
+    Context myContext = this;
+
     public static boolean activityStarted = false;
+
+    public int radioButtonID;
 
     User user;
     Realm realm;
+
+    public RadioGroup radioGroupHeatMap;
+    public View dialoglayoutHeatMap;
+
+    TileOverlay mOverlay;
 
     private GoogleApiClient mGoogleApiClient;
     private GoogleApiClient mGoogleWearApiClient;
@@ -175,6 +185,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Map<Gym, Marker> gymMarkerMap = new HashMap<>();
     private Map<PokeStop, Marker> pokestopMarkerMap = new HashMap<>();
     private ArrayList<Circle> circleArray = new ArrayList<>();
+    public AlertDialog.Builder builderDeleteFile;
 
     RelativeLayout rl;
 
@@ -948,15 +959,29 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 */
         LayoutInflater inflater = getLayoutInflater();
 
-        final View dialoglayout = inflater.inflate(R.layout.dialog_radiogroup,null);
-        final AlertDialog builder = new AlertDialog.Builder(this).create();
-        builder.setView(dialoglayout);
-        RadioGroup radioGroup = (RadioGroup) dialoglayout.findViewById(R.id.radioGroupHeat);
+
+        if(builderHeatMap==null) {
+            dialoglayoutHeatMap = inflater.inflate(R.layout.dialog_radiogroup, null);
+            builderHeatMap = new AlertDialog.Builder(this).create();
+            builderHeatMap.setView(dialoglayoutHeatMap);
+        }
+        if(radioGroupHeatMap==null){
+            radioGroupHeatMap = (RadioGroup) dialoglayoutHeatMap.findViewById(R.id.radioGroupHeat);
+        }
+
+        if(radioGroupHeatMap.getChildCount()>2){
+            builderHeatMap.show();
+            return;
+        }
         try {
             ArrayList<FilterItem> pokeList = PokemonListLoader.getPokelist(this);
         String uri;
+            final float scale = getResources().getDisplayMetrics().density;
+            int pixels = (int) (40 * scale + 0.5f);
         for(int i = 0;i<pokeList.size();i++){
             RadioButton radioButton = new RadioButton(this);
+
+
             radioButton.setText(pokeList.get(i).getFormalName(this));
             if (SettingsUtil.getSettings(this).isShuffleIcons()) {
                 uri = "ps" + pokeList.get(i).getNumber();
@@ -964,10 +989,126 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             else uri = "p" + pokeList.get(i).getNumber();
 
             int resourceID = getResources().getIdentifier(uri, "drawable", getPackageName());
-            radioButton.setCompoundDrawablesWithIntrinsicBounds(null,null,ResourcesCompat.getDrawable(getResources(), resourceID, null),null);
-            radioGroup.addView(radioButton);
+
+            Drawable dr = ResourcesCompat.getDrawable(getResources(), resourceID, null);
+            Bitmap bitmap = ((BitmapDrawable) dr).getBitmap();
+            Drawable d = new BitmapDrawable(getResources(), Bitmap.createScaledBitmap(bitmap, pixels, pixels, true));
+
+
+            radioButton.setCompoundDrawablesWithIntrinsicBounds(d,null,null,null);
+            RadioGroup.LayoutParams lp = new RadioGroup.LayoutParams(RadioGroup.LayoutParams.MATCH_PARENT, pixels);
+            radioButton.setHeight(pixels);
+            radioButton.setLayoutParams(lp);
+            radioGroupHeatMap.addView(radioButton);
+
+
+
         }
-        builder.show();} catch (IOException e) {
+
+            if(radioButtonID==0){
+                radioGroupHeatMap.check(R.id.radioButtonNoHeatmap);
+            } else {
+                radioGroupHeatMap.check(radioButtonID);
+            }
+            builderHeatMap.show();
+
+            Button btnCancel = (Button) dialoglayoutHeatMap.findViewById(R.id.btnCancel);
+            btnCancel.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    builderHeatMap.cancel();
+                }
+            });
+
+            Button btnDelete = (Button) dialoglayoutHeatMap.findViewById(R.id.btnDelete);
+            btnDelete.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    AlertDialog.Builder builder;
+                    DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            switch (which){
+                                case DialogInterface.BUTTON_POSITIVE:
+                                    //Yes button clicked
+                                    File file = new File(getFilesDir(), "pokeList.txt");
+                                    file.delete();
+                                    break;
+
+                                case DialogInterface.BUTTON_NEGATIVE:
+                                    //No button clicked
+                                    dialog.dismiss();
+                                    break;
+                            }
+                        }
+                    };
+
+                    builderDeleteFile = new AlertDialog.Builder(myContext);
+                    builderDeleteFile.setMessage("Are you sure?").setPositiveButton("Yes", dialogClickListener)
+                            .setNegativeButton("No", dialogClickListener).show();
+                }
+            });
+
+            Button btnConfirm = (Button) dialoglayoutHeatMap.findViewById(R.id.btnAccept);
+            btnConfirm.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    ArrayList<LatLng> pokemonPosition = new ArrayList<LatLng>();
+                    Gson gson = new Gson();
+
+                    radioButtonID = radioGroupHeatMap.getCheckedRadioButtonId();
+                    View radioButton = radioGroupHeatMap.findViewById(radioButtonID);
+                    int selectedPokemon = radioGroupHeatMap.indexOfChild(radioButton);
+
+                    if(selectedPokemon == 0){
+                        if(mOverlay!=null){
+                            mOverlay.remove();
+                        }
+                        builderHeatMap.dismiss();
+                        return;
+                    }
+
+                    File file = new File(getFilesDir(), "pokeList.txt");
+                    FileInputStream fin = null;
+                    try {
+                        fin = new FileInputStream(file);
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
+
+                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
+                    String receiveString = "";
+                    StringBuilder stringBuilder = new StringBuilder();
+
+                    try {
+                        while ( (receiveString = bufferedReader.readLine()) != null ) {
+                            JsonReader reader = new JsonReader(new StringReader(receiveString));
+                            reader.setLenient(true);
+                            Pokemons pokemons = gson.fromJson(reader, new TypeToken<Pokemons>() {
+                            }.getType());
+
+                            if(pokemons.getNumber()==selectedPokemon){
+                                pokemonPosition.add(new LatLng(pokemons.getLatitude(), pokemons.getLongitude()));
+                            }
+                        }
+
+                        if(pokemonPosition.size()==0){
+                            builderHeatMap.dismiss();
+                            showToast(R.string.noPokeHeat);
+                            return;
+                        }
+
+                        HeatmapTileProvider mProvider = new HeatmapTileProvider.Builder()
+                                .data(pokemonPosition)
+                                .build();
+                        mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+                        builderHeatMap.dismiss();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
