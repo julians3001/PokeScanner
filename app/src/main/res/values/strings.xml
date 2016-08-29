@@ -18,6 +18,7 @@
     <string name="pokemon_name">Pokémon Name</string>
 
     <string name="noPokeHeat">No Pokémon in Heatmap</string>
+    <string name="noFileHeat">No File saved</string>
 
     <string name="AUTH_FAILED">Bad Login Credentials</string>
     <string name="SERVER_FAILED">Servers not responding</string>

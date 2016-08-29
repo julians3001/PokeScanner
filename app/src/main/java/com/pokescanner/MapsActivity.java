@@ -206,7 +206,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         instance = this;
-
+        createHeatMapList();
         mGoogleWearApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
                     @Override
@@ -945,71 +945,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @OnClick(R.id.btnHeatMapMode)
     public void createHeatMap(){
         floatingActionMenu.close(false);
-        /*File file = new File(getFilesDir(), "pokeList.txt");
-        FileInputStream fin = null;
-        try {
-            fin = new FileInputStream(file);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+
+        if (radioButtonID == 0) {
+            radioGroupHeatMap.check(R.id.radioButtonNoHeatmap);
+        } else {
+            radioGroupHeatMap.check(radioButtonID);
         }
 
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
-        String receiveString = "";
-        StringBuilder stringBuilder = new StringBuilder();
-*/
-        LayoutInflater inflater = getLayoutInflater();
-
-
-        if(builderHeatMap==null) {
-            dialoglayoutHeatMap = inflater.inflate(R.layout.dialog_radiogroup, null);
-            builderHeatMap = new AlertDialog.Builder(this).create();
-            builderHeatMap.setView(dialoglayoutHeatMap);
-        }
-        if(radioGroupHeatMap==null){
-            radioGroupHeatMap = (RadioGroup) dialoglayoutHeatMap.findViewById(R.id.radioGroupHeat);
-        }
-
-        if(radioGroupHeatMap.getChildCount()>2){
-            builderHeatMap.show();
-            return;
-        }
-        try {
-            ArrayList<FilterItem> pokeList = PokemonListLoader.getPokelist(this);
-        String uri;
-            final float scale = getResources().getDisplayMetrics().density;
-            int pixels = (int) (40 * scale + 0.5f);
-        for(int i = 0;i<pokeList.size();i++){
-            RadioButton radioButton = new RadioButton(this);
-
-
-            radioButton.setText(pokeList.get(i).getFormalName(this));
-            if (SettingsUtil.getSettings(this).isShuffleIcons()) {
-                uri = "ps" + pokeList.get(i).getNumber();
-            }
-            else uri = "p" + pokeList.get(i).getNumber();
-
-            int resourceID = getResources().getIdentifier(uri, "drawable", getPackageName());
-
-            Drawable dr = ResourcesCompat.getDrawable(getResources(), resourceID, null);
-            Bitmap bitmap = ((BitmapDrawable) dr).getBitmap();
-            Drawable d = new BitmapDrawable(getResources(), Bitmap.createScaledBitmap(bitmap, pixels, pixels, true));
-
-
-            radioButton.setCompoundDrawablesWithIntrinsicBounds(d,null,null,null);
-            RadioGroup.LayoutParams lp = new RadioGroup.LayoutParams(RadioGroup.LayoutParams.MATCH_PARENT, pixels);
-            radioButton.setHeight(pixels);
-            radioButton.setLayoutParams(lp);
-            radioGroupHeatMap.addView(radioButton);
-
-
-
-        }
-
-            if(radioButtonID==0){
-                radioGroupHeatMap.check(R.id.radioButtonNoHeatmap);
-            } else {
-                radioGroupHeatMap.check(radioButtonID);
-            }
             builderHeatMap.show();
 
             Button btnCancel = (Button) dialoglayoutHeatMap.findViewById(R.id.btnCancel);
@@ -1076,6 +1018,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         e.printStackTrace();
                     }
 
+                    if(fin == null){
+                        showToast(R.string.noFileHeat);
+                        builderHeatMap.dismiss();
+                        return;
+                    }
+
                     BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
                     String receiveString = "";
                     StringBuilder stringBuilder = new StringBuilder();
@@ -1101,19 +1049,78 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         HeatmapTileProvider mProvider = new HeatmapTileProvider.Builder()
                                 .data(pokemonPosition)
                                 .build();
-                        mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+                        if(mOverlay!=null){
+                            mProvider.setData(pokemonPosition);
+                            mOverlay.remove();
+                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+                        } else {
+                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+                        }
                         builderHeatMap.dismiss();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
             });
-        } catch (IOException e) {
-            e.printStackTrace();
         }
-    }
 
-    @OnClick(R.id.btnAddressSearch)
+
+
+    public void createHeatMapList() {
+        LayoutInflater inflater = getLayoutInflater();
+
+
+        if (builderHeatMap == null) {
+            dialoglayoutHeatMap = inflater.inflate(R.layout.dialog_radiogroup, null);
+            builderHeatMap = new AlertDialog.Builder(this).create();
+            builderHeatMap.setView(dialoglayoutHeatMap);
+        }
+        if (radioGroupHeatMap == null) {
+            radioGroupHeatMap = (RadioGroup) dialoglayoutHeatMap.findViewById(R.id.radioGroupHeat);
+        }
+
+
+        try {
+            ArrayList<FilterItem> pokeList = PokemonListLoader.getPokelist(this);
+            String uri;
+            final float scale = getResources().getDisplayMetrics().density;
+            int pixels = (int) (40 * scale + 0.5f);
+            for (int i = 0; i < pokeList.size(); i++) {
+                RadioButton radioButton = new RadioButton(this);
+
+
+                radioButton.setText(pokeList.get(i).getFormalName(this));
+                if (SettingsUtil.getSettings(this).isShuffleIcons()) {
+                    uri = "ps" + pokeList.get(i).getNumber();
+                } else uri = "p" + pokeList.get(i).getNumber();
+
+                int resourceID = getResources().getIdentifier(uri, "drawable", getPackageName());
+
+                Drawable dr = ResourcesCompat.getDrawable(getResources(), resourceID, null);
+                Bitmap bitmap = ((BitmapDrawable) dr).getBitmap();
+                Drawable d = new BitmapDrawable(getResources(), Bitmap.createScaledBitmap(bitmap, pixels, pixels, true));
+
+
+                radioButton.setCompoundDrawablesWithIntrinsicBounds(d, null, null, null);
+                RadioGroup.LayoutParams lp = new RadioGroup.LayoutParams(RadioGroup.LayoutParams.MATCH_PARENT, pixels);
+                radioButton.setHeight(pixels);
+                radioButton.setLayoutParams(lp);
+                radioGroupHeatMap.addView(radioButton);
+
+
+            }
+
+            if (radioButtonID == 0) {
+                radioGroupHeatMap.check(R.id.radioButtonNoHeatmap);
+            } else {
+                radioGroupHeatMap.check(radioButtonID);
+            }
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+
+    }
+        @OnClick(R.id.btnAddressSearch)
     public void searchAddressDialog() {
         LayoutInflater inflater = getLayoutInflater();
         View dialoglayout = inflater.inflate(R.layout.dialog_search_address, null);
