@@ -93,6 +93,15 @@ public class AutoScanService extends IntentService{
 
     }
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId){
+
+
+        return START_REDELIVER_INTENT;
+    }
+
+
+
     @SuppressWarnings({"MissingPermission"})
     public LatLng getCurrentLocation() {
         if (PermissionUtils.doWeHaveGPSandLOC(this)) {
