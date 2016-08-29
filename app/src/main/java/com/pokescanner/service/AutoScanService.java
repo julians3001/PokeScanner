@@ -1,11 +1,16 @@
 package com.pokescanner.service;
 
 import android.app.IntentService;
+import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.location.Location;
+import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -34,17 +39,45 @@ import static com.pokescanner.helper.Generation.makeHexScanMap;
 /**
  * Created by Julian on 10.08.2016.
  */
-public class AutoScanService extends IntentService{
+public class AutoScanService extends Service{
 
     List<LatLng> scanMap = new ArrayList<>();
     ArrayList<Pokemons> oldPokelist = new ArrayList<>();
 
     public AutoScanService(){
-        super("PokeScanner");
+        super();
     }
+
+
+    /*@Override
+    public int onStartCommand(Intent intent, int flags, int startId){
+
+
+        return START_REDELIVER_INTENT;
+    }*/
+
     @Override
-    protected void onHandleIntent(Intent intent) {
+    public void onCreate(){
+        Intent notificationIntent = new Intent(this, MapsActivity.class);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0,
+                notificationIntent, 0);
+        Bitmap bm = BitmapFactory.decodeResource(getResources(), R.drawable.icon).copy(Bitmap.Config.ARGB_8888, true);
+
+        Notification notification = new NotificationCompat.Builder(this)
+                .setSmallIcon(R.drawable.ic_directions_car_white_24dp)
+                .setLargeIcon(bm)
+                .setContentTitle("Autoscan-Service is running")
+                .setContentIntent(pendingIntent).build();
+
+        startForeground(1337, notification);
+    }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
         final Intent incomingIntent = intent;
+
 
         new Thread(new Runnable() {
             @Override
@@ -73,6 +106,7 @@ public class AutoScanService extends IntentService{
                             Toast.makeText(AutoScanService.this.getApplicationContext(),"New Scan started...", Toast.LENGTH_SHORT).show();
                         }
                     });
+                    System.out.println("New Scan started...");
                     for(Thread thread: MultiAccountLoader.threads){
                         try {
                             thread.join();
@@ -90,16 +124,8 @@ public class AutoScanService extends IntentService{
                 }
             }
         }).start();
-
+        return null;
     }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId){
-
-
-        return START_REDELIVER_INTENT;
-    }
-
 
 
     @SuppressWarnings({"MissingPermission"})
@@ -115,5 +141,12 @@ public class AutoScanService extends IntentService{
             return null;
         }
         return null;
+    }
+
+    public class LocalBinder extends Binder {
+        public AutoScanService getService() {
+            // Return this instance of LocalService so clients can call public methods
+            return AutoScanService.this;
+        }
     }
 }

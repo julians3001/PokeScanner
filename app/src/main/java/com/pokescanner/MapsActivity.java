@@ -1,9 +1,11 @@
 package com.pokescanner;
 
 import android.annotation.TargetApi;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -18,6 +20,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
@@ -187,6 +190,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private ArrayList<Circle> circleArray = new ArrayList<>();
     public AlertDialog.Builder builderDeleteFile;
 
+    AutoScanService mService;
+    boolean mBound = false;
+
     RelativeLayout rl;
 
     Polygon mBoundingHexagon = null;
@@ -194,6 +200,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public boolean scanCurrentPosition = false;
 
     String TAG = "wear";
+    public ServiceConnection mConnection;
 
     int pos = 1;
     //Used for determining Scan status
@@ -205,6 +212,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        mConnection = new ServiceConnection() {
+
+            @Override
+            public void onServiceConnected(ComponentName className,
+                                           IBinder service) {
+                // We've bound to LocalService, cast the IBinder and get LocalService instance
+                AutoScanService.LocalBinder binder = (AutoScanService.LocalBinder) service;
+                mService = binder.getService();
+                mBound = true;
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName arg0) {
+                mBound = false;
+            }
+        };
         instance = this;
         createHeatMapList();
         mGoogleWearApiClient = new GoogleApiClient.Builder(this)
@@ -322,6 +345,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @OnClick(R.id.btnAutoScan)
         public void AutoScan() {
+
         if(MultiAccountLoader.autoScan){
             MultiAccountLoader.autoScan = false;
         } else {
@@ -365,14 +389,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 showToast(R.string.SCAN_FAILED);
                 showProgressbar(false);
             }
+
             Intent intentService = new Intent(this, AutoScanService.class);
             intentService.putExtra("mode",0);
-            startService(intentService);
+            bindService(intentService,mConnection,Context.BIND_AUTO_CREATE);
             StartStopSendToWear(true, scanMap.size());
         } else {
             btnAutoScan.setBackground(getDrawable(R.drawable.circle_button));
             Intent intentService = new Intent(this, AutoScanService.class);
-            stopService(intentService);
+            unbindService(mConnection);
             MultiAccountLoader.cancelAllThreads();
             StartStopSendToWear(false, 1);
         }
@@ -381,6 +406,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @OnLongClick(R.id.btnAutoScan)
     public boolean AutoScanCamera() {
+
+
+
         if(MultiAccountLoader.autoScan){
             MultiAccountLoader.autoScan = false;
         } else {
@@ -402,6 +430,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             progressBar.setProgress(0);
             showProgressbar(true);
+
 
             if (scanPosition != null) {
                 scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
@@ -429,13 +458,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 showToast(R.string.SCAN_FAILED);
                 showProgressbar(false);
             }
+
+
             Intent intentService = new Intent(this, AutoScanService.class);
-            startService(intentService);
+            bindService(intentService,mConnection,Context.BIND_AUTO_CREATE);
             StartStopSendToWear(true, scanMap.size());
         } else {
             btnAutoScan.setBackground(getDrawable(R.drawable.circle_button));
             Intent intentService = new Intent(this, AutoScanService.class);
-            stopService(intentService);
+            unbindService(mConnection);
             MultiAccountLoader.cancelAllThreads();
             StartStopSendToWear(false, 1);
         }
