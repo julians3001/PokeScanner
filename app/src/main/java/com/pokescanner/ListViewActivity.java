@@ -19,7 +19,6 @@ import android.widget.ProgressBar;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.wearable.Wearable;
 import com.pokescanner.events.ScanCircleEvent;
@@ -158,7 +157,7 @@ public class ListViewActivity extends AppCompatActivity implements GoogleApiClie
             //Put our pokemon inside an object
             Pokemons temp = pokemon.get(i);
             //Now we check has it expired
-            if (!temp.isExpired()) {
+            if (!temp.isNotExpired()) {
                 //If it has lets removed the pokemon
                 realm.beginTransaction();
                 realm.where(Pokemons.class).equalTo("encounterid",temp.getEncounterid()).findAll().deleteAllFromRealm();

@@ -101,6 +101,7 @@ import com.pokescanner.utils.MarkerDetails;
 import com.pokescanner.utils.PermissionUtils;
 import com.pokescanner.utils.SettingsUtil;
 import com.pokescanner.utils.UiUtils;
+import com.zl.reik.dilatingdotsprogressbar.DilatingDotsProgressBar;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -157,6 +158,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     ImageButton btnAutoScan;
     @BindView(R.id.btnHeatMapMode)
     ImageButton btnHeatMapMode;
+    @BindView(R.id.btnCenterCamera)
+            ImageButton btnCenterCamera;
     boolean AutoScan = false;
 
 
@@ -574,6 +577,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         Toast.makeText(MapsActivity.this, getString(resString), Toast.LENGTH_SHORT).show();
     }
 
+    public void showToast(String resString) {
+        Toast.makeText(MapsActivity.this, resString, Toast.LENGTH_SHORT).show();
+    }
+
     public void showProgressbar(boolean status) {
         if (status) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -627,7 +634,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     if (curScreen.contains(new LatLng(pokemon.getLatitude(), pokemon.getLongitude()))) {
                         //If yes then has he expired?
                         //This isnt worded right it should say isNotExpired (Will fix later)
-                        if (pokemon.isExpired()) {
+                        if (pokemon.isNotExpired()) {
                             if (UiUtils.isPokemonFiltered(pokemon) ||
                                     UiUtils.isPokemonExpiredFiltered(pokemon, this)) {
                                 if (pokemonsMarkerMap.containsKey(pokemon)) {
@@ -1026,71 +1033,134 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             btnConfirm.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    ArrayList<LatLng> pokemonPosition = new ArrayList<LatLng>();
-                    Gson gson = new Gson();
 
-                    radioButtonID = radioGroupHeatMap.getCheckedRadioButtonId();
-                    View radioButton = radioGroupHeatMap.findViewById(radioButtonID);
-                    int selectedPokemon = radioGroupHeatMap.indexOfChild(radioButton);
+                    final DilatingDotsProgressBar heatProgress = (DilatingDotsProgressBar) dialoglayoutHeatMap.findViewById(R.id.heatProgress);
+                    final Button heatProgressOverlay = (Button) dialoglayoutHeatMap.findViewById(R.id.heatProgressOverlay);
 
-                    if(selectedPokemon == 0){
-                        if(mOverlay!=null){
-                            mOverlay.remove();
-                        }
-                        builderHeatMap.dismiss();
-                        return;
-                    }
+                    heatProgressOverlay.setVisibility(View.VISIBLE);
+                    heatProgress.show();
 
-                    File file = new File(getFilesDir(), "pokeList.txt");
-                    FileInputStream fin = null;
-                    try {
-                        fin = new FileInputStream(file);
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    }
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            final ArrayList<LatLng> pokemonPosition = new ArrayList<LatLng>();
+                            Gson gson = new Gson();
 
-                    if(fin == null){
-                        showToast(R.string.noFileHeat);
-                        builderHeatMap.dismiss();
-                        return;
-                    }
+                            radioButtonID = radioGroupHeatMap.getCheckedRadioButtonId();
+                            View radioButton = radioGroupHeatMap.findViewById(radioButtonID);
+                            final int selectedPokemon = radioGroupHeatMap.indexOfChild(radioButton);
 
-                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
-                    String receiveString = "";
-                    StringBuilder stringBuilder = new StringBuilder();
+                            if(selectedPokemon == 0){
+                                if(mOverlay!=null){
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            mOverlay.remove();
+                                        }
+                                    });
+                                }
 
-                    try {
-                        while ( (receiveString = bufferedReader.readLine()) != null ) {
-                            JsonReader reader = new JsonReader(new StringReader(receiveString));
-                            reader.setLenient(true);
-                            Pokemons pokemons = gson.fromJson(reader, new TypeToken<Pokemons>() {
-                            }.getType());
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        heatProgressOverlay.setVisibility(View.INVISIBLE);
+                                        heatProgress.hide();
+                                    }
+                                });
+                                builderHeatMap.dismiss();
+                                return;
+                            }
 
-                            if(pokemons.getNumber()==selectedPokemon){
-                                pokemonPosition.add(new LatLng(pokemons.getLatitude(), pokemons.getLongitude()));
+                            File file = new File(getFilesDir(), "pokeList.txt");
+                            FileInputStream fin = null;
+                            try {
+                                fin = new FileInputStream(file);
+                            } catch (FileNotFoundException e) {
+                                e.printStackTrace();
+                            }
+
+                            if(fin == null){
+
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        showToast(R.string.noFileHeat);
+                                        heatProgressOverlay.setVisibility(View.INVISIBLE);
+                                        heatProgress.hide();
+                                    }
+                                });
+                                builderHeatMap.dismiss();
+                                return;
+                            }
+
+                            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
+                            String receiveString = "";
+                            StringBuilder stringBuilder = new StringBuilder();
+
+                            try {
+                                while ( (receiveString = bufferedReader.readLine()) != null ) {
+                                    JsonReader reader = new JsonReader(new StringReader(receiveString));
+                                    reader.setLenient(true);
+                                    Pokemons pokemons = gson.fromJson(reader, new TypeToken<Pokemons>() {
+                                    }.getType());
+
+                                    if(pokemons.getNumber()==selectedPokemon){
+                                        pokemonPosition.add(new LatLng(pokemons.getLatitude(), pokemons.getLongitude()));
+                                    }
+                                }
+
+                                if(pokemonPosition.size()==0){
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            heatProgressOverlay.setVisibility(View.INVISIBLE);
+                                            heatProgress.hide();
+                                            mOverlay.remove();
+                                            builderHeatMap.dismiss();
+                                            showToast(R.string.noPokeHeat);
+                                        }
+                                    });
+
+                                    return;
+                                }
+
+                                final HeatmapTileProvider mProvider = new HeatmapTileProvider.Builder()
+                                        .data(pokemonPosition)
+                                        .build();
+                                if(mOverlay!=null){
+                                    mProvider.setData(pokemonPosition);
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+
+                                            mOverlay.remove();
+                                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+                                            showToast(pokemonPosition.size()+" "+((RadioButton)radioGroupHeatMap.getChildAt(selectedPokemon)).getText()+" were found");
+                                        }
+                                    });
+                                } else {
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+
+                                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
+                                            showToast(pokemonPosition.size()+" "+((RadioButton)radioGroupHeatMap.getChildAt(selectedPokemon)).getText()+" were found");
+                                        }
+                                    });
+                                }
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        heatProgressOverlay.setVisibility(View.INVISIBLE);
+                                        heatProgress.hide();
+                                    }
+                                });
+                                builderHeatMap.dismiss();
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
                         }
-
-                        if(pokemonPosition.size()==0){
-                            builderHeatMap.dismiss();
-                            showToast(R.string.noPokeHeat);
-                            return;
-                        }
-
-                        HeatmapTileProvider mProvider = new HeatmapTileProvider.Builder()
-                                .data(pokemonPosition)
-                                .build();
-                        if(mOverlay!=null){
-                            mProvider.setData(pokemonPosition);
-                            mOverlay.remove();
-                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
-                        } else {
-                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
-                        }
-                        builderHeatMap.dismiss();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    }).start();
                 }
             });
         }
@@ -1307,7 +1377,24 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onLowMemory() {
         super.onLowMemory();
-        cleanEntireMap();
+        System.out.println("onLowMemory Called!");
+        realm.executeTransaction(new Realm.Transaction() {
+            @Override
+            public void execute(Realm realm) {
+                ArrayList<Pokemons> pokemons = new ArrayList<Pokemons>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+                realm.where(Pokemons.class).findAll().deleteAllFromRealm();
+                for(int i = 0; i<pokemons.size();i++){
+                    if(pokemons.get(i).isNotExpired()){
+                       realm.copyToRealm(pokemons.get(i));
+                    } else {
+                        System.out.println(pokemons.get(i).getFormalName(myContext)+" has been removed");
+                    }
+                }
+
+
+
+            }
+        });
     }
     public boolean moveCameraToCurrentPosition(boolean zoom) {
         LatLng GPS_LOCATION = getCurrentLocation();
@@ -1360,6 +1447,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             forceRefreshEvent(new ForceRefreshEvent());
             clearPokemonListOnWear();
         }
+    }
+
+    @OnClick(R.id.btnCenterCamera)
+    public void btnCenterCamer(){
+        moveCameraToCurrentPosition(true);
     }
     @OnLongClick(R.id.btnClear)
     public boolean cleanEntireMap(){

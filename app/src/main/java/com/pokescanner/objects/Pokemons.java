@@ -29,7 +29,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = false,exclude = {"distance","Name","Number","expires"})
+@EqualsAndHashCode(callSuper = false,exclude = {"distance","Name","Number","expires","spawningTime"})
 public class Pokemons  extends RealmObject{
     int Number;
     @Index
@@ -39,6 +39,7 @@ public class Pokemons  extends RealmObject{
     long expires;
     double longitude,latitude;
     double distance;
+    long spawningTime;
 
     public Pokemons() {}
 
@@ -49,12 +50,16 @@ public class Pokemons  extends RealmObject{
             setNumber(pokemonIn.getPokemonId().getNumber());
             setLatitude(pokemonIn.getLatitude());
             setLongitude(pokemonIn.getLongitude());
+            setSpawningTime(pokemonIn.getExpirationTimestampMs()-System.currentTimeMillis());
+
     }
+
+
 
     public int getResourceID(Context context) {
         return DrawableUtils.getResourceID(getNumber(),context);
     }
-    public boolean isExpired() {
+    public boolean isNotExpired() {
         //Create a date
         DateTime expires = new DateTime(getExpires());
         //If this date is after the current time then it has not expired!

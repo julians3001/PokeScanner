@@ -1,63 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent">
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_width="match_parent"
-        android:layout_height="75dp"
-        android:background="@color/colorPrimary"
-        android:padding="10dp"
-        android:gravity="center_vertical|center_horizontal">
 
-        <Button
-            android:layout_width="0dp"
-            android:layout_height="fill_parent"
-            android:text="@string/cancel"
-            android:id="@+id/btnCancel"
-            android:layout_gravity="center_horizontal"
-            android:layout_weight="1"
-            android:layout_marginRight="5dp"
-            android:layout_marginLeft="5dp" />
-        <Button
-            android:layout_width="0dp"
-            android:layout_height="fill_parent"
-            android:text="Datei löschen"
-            android:id="@+id/btnDelete"
-            android:layout_gravity="center_horizontal"
-            android:layout_weight="1"
-            android:layout_marginRight="5dp"
-            android:layout_marginLeft="5dp" />
 
-        <Button
-            android:layout_width="0dp"
-            android:layout_height="fill_parent"
-            android:text="@string/save"
-            android:id="@+id/btnAccept"
-            android:layout_gravity="center_horizontal"
-            android:layout_weight="1"
-            android:layout_marginRight="5dp"
-            android:layout_marginLeft="5dp" />
-    </LinearLayout>
-    <ScrollView
+<FrameLayout
+xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+android:layout_width="match_parent"
+android:layout_height="match_parent">
+
+    <com.zl.reik.dilatingdotsprogressbar.DilatingDotsProgressBar
+        android:id="@+id/heatProgress"
+
+        android:layout_marginTop="200dp"
+        android:layout_marginLeft="40dp"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-    <RadioGroup
+        android:layout_height="wrap_content"
+        android:radius="5dp"
+        android:color="@color/colorPrimary"
+        app:dd_numDots="10"
+        app:dd_scaleMultiplier="1.5"
+        app:dd_animationDuration="500"
+        app:dd_horizontalSpacing="15dp"
+        />
+    <Button
+        android:id="@+id/heatProgressOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:id="@+id/radioGroupHeat">
+        android:background="#d3555555"
+        android:visibility="invisible"
+        android:elevation="@null"/>
 
-        <RadioButton
+
+
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:text="No Heatmap"
-        android:drawableLeft="@drawable/ic_close_black_24dp"
+        android:layout_height="match_parent">
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="75dp"
+            android:background="@color/colorPrimary"
+            android:padding="10dp"
+            android:gravity="center_vertical|center_horizontal">
 
-        android:id="@+id/radioButtonNoHeatmap" />
+            <Button
+                android:layout_width="0dp"
+                android:layout_height="fill_parent"
+                android:text="@string/cancel"
+                android:id="@+id/btnCancel"
+                android:layout_gravity="center_horizontal"
+                android:layout_weight="1"
+                android:layout_marginRight="5dp"
+                android:layout_marginLeft="5dp" />
+            <Button
+                android:layout_width="0dp"
+                android:layout_height="fill_parent"
+                android:text="Datei löschen"
+                android:id="@+id/btnDelete"
+                android:layout_gravity="center_horizontal"
+                android:layout_weight="1"
+                android:layout_marginRight="5dp"
+                android:layout_marginLeft="5dp" />
+
+            <Button
+                android:layout_width="0dp"
+                android:layout_height="fill_parent"
+                android:text="@string/save"
+                android:id="@+id/btnAccept"
+                android:layout_gravity="center_horizontal"
+                android:layout_weight="1"
+                android:layout_marginRight="5dp"
+                android:layout_marginLeft="5dp" />
+        </LinearLayout>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <RadioGroup
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentStart="true"
+                android:id="@+id/radioGroupHeat">
+
+                <RadioButton
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:text="No Heatmap"
+                    android:drawableLeft="@drawable/ic_close_black_24dp"
+
+                    android:id="@+id/radioButtonNoHeatmap" />
 
 
-    </RadioGroup>
-    </ScrollView>
-</LinearLayout>
+            </RadioGroup>
+        </ScrollView>
+
+    </LinearLayout>
+
+
+
+
+
+</FrameLayout>

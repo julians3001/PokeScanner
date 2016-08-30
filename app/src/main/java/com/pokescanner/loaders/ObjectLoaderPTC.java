@@ -45,7 +45,6 @@ import com.pokescanner.utils.UiUtils;
 
 import org.greenrobot.eventbus.EventBus;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -119,13 +118,15 @@ public class ObjectLoaderPTC extends Thread {
                                 public void execute(Realm realm) {
                                     for (MapPokemonOuterClass.MapPokemon pokemonOut : collectionPokemon){
                                         Pokemons pokemon = new Pokemons(pokemonOut);
-                                        try {
 
-                                            savePokemonToFile(pokemon);
+                                        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+                                        try {
+                                            if(!pokelist.contains(pokemon)){
+                                                savePokemonToFile(pokemon);
+                                            }
                                         } catch (IOException e) {
                                             e.printStackTrace();
                                         }
-                                        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
                                         realm.copyToRealmOrUpdate(pokemon);
                                         if(UiUtils.isPokemonNotification(pokemon)&&!pokelist.contains(pokemon)){
 
@@ -151,7 +152,7 @@ public class ObjectLoaderPTC extends Thread {
                                             mBuilder.setSound(alarmSound);
                                             NotificationManager mNotificationManager =
                                                     (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-                                            if(pokemon.isExpired())
+                                            if(pokemon.isNotExpired())
                                                 mNotificationManager.notify( (int) System.currentTimeMillis(), mBuilder.build());
                                         }
                                     }
