@@ -162,7 +162,11 @@ public class MultiboxingActivity extends AppCompatActivity implements
 
                 User user = new User(username,password,null,User.PTC,User.STATUS_UNKNOWN);
                 TypedArray colors = getResources().obtainTypedArray(R.array.circleColors);
-                user.setAccountColor(colors.getResourceId(color, -1));
+                Random r = new Random();
+
+                int nextInt = r.nextInt(199);
+                int colorId = colors.getColor(nextInt, -1);
+                user.setAccountColor(colorId);
 
                 realm.beginTransaction();
                 realm.copyToRealmOrUpdate(user);
