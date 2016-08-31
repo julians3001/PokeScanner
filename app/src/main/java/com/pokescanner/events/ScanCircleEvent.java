@@ -7,8 +7,10 @@ import com.google.android.gms.maps.model.LatLng;
  */
 public class ScanCircleEvent {
     public LatLng pos;
+    public int color;
 
-    public ScanCircleEvent(LatLng pos) {
+    public ScanCircleEvent(LatLng pos, int color) {
         this.pos = pos;
+        this.color = color;
     }
 }

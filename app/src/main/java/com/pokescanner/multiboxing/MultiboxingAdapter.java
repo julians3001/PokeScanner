@@ -95,7 +95,11 @@ public class MultiboxingAdapter extends RecyclerView.Adapter<MultiboxingAdapter.
                 Drawable drawable = ResourcesCompat.getDrawable(mContext.getResources(),R.drawable.circle_button,null);
                 drawable = DrawableCompat.wrap(drawable);
                 drawable.setAlpha(128);
-                drawable.setColorFilter(ResourcesCompat.getColor(mContext.getResources(),user.getAccountColor(),null), PorterDuff.Mode.SRC);
+                try{
+                    drawable.setColorFilter(user.getAccountColor(), PorterDuff.Mode.SRC);
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
                 accountColor.setImageDrawable(drawable);
             }
 

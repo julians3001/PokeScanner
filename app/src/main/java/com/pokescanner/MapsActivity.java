@@ -56,12 +56,14 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.TileOverlay;
@@ -106,6 +108,9 @@ import com.zl.reik.dilatingdotsprogressbar.DilatingDotsProgressBar;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -164,6 +169,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
     public AlertDialog builderHeatMap;
+    public ArrayList<LatLng> pokemonPosition;
+
+    public ArrayList<MarkerOptions> markerHeatList;
 
 
     LocationManager locationManager;
@@ -201,6 +209,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     Polygon mBoundingHexagon = null;
 
     public boolean scanCurrentPosition = false;
+
+    public ArrayList<Pokemons> pokemonHeatList;
+
+    public HeatmapTileProvider mHeatProvider;
 
     String TAG = "wear";
     public ServiceConnection mConnection;
@@ -400,7 +412,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else {
             btnAutoScan.setBackground(getDrawable(R.drawable.circle_button));
             Intent intentService = new Intent(this, AutoScanService.class);
-            unbindService(mConnection);
+            try{
+                unbindService(mConnection);
+            } catch (Exception e){
+                e.printStackTrace();
+            }
             MultiAccountLoader.cancelAllThreads();
             StartStopSendToWear(false, 1);
         }
@@ -834,7 +850,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             CircleOptions circleOptions = new CircleOptions()
                     .radius(80)
                     .strokeWidth(0)
-                    .fillColor(ResourcesCompat.getColor(getResources(),R.color.colorPrimaryTransparent,null))
+                    .fillColor(adjustAlpha(event.color,0.5f))
                     .center(event.pos);
             circleArray.add(mMap.addCircle(circleOptions));
             SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -852,7 +868,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-
+    public int adjustAlpha(int color, float factor) {
+        int alpha = Math.round(Color.alpha(color) * factor);
+        int red = Color.red(color);
+        int green = Color.green(color);
+        int blue = Color.blue(color);
+        return Color.argb(alpha, red, green, blue);
+    }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void forceRefreshEvent(ForceRefreshEvent event) {
@@ -1000,6 +1022,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             });
 
+        btnCancel.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+                if(!LIST_MODE){
+
+                    mMap.clear();
+                    LIST_MODE = true;
+                } else {
+                    LIST_MODE = false;
+                }
+                return true;
+            }
+        });
+
             Button btnDelete = (Button) dialoglayoutHeatMap.findViewById(R.id.btnDelete);
             btnDelete.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -1038,12 +1074,67 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     final Button heatProgressOverlay = (Button) dialoglayoutHeatMap.findViewById(R.id.heatProgressOverlay);
 
                     heatProgressOverlay.setVisibility(View.VISIBLE);
+                    heatProgress.setVisibility(View.VISIBLE);
                     heatProgress.show();
+
+                    mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+                        @Override
+                        public void onMapClick(LatLng latLng) {
+                            final LatLng markerLatLng = latLng;
+                            markerHeatList = new ArrayList<MarkerOptions>();
+
+                            if(pokemonPosition==null||pokemonPosition.size()==0){
+                                return;
+                            }
+
+                            cleanPokemon();
+                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mHeatProvider));
+
+                            for(int i = 0;i<pokemonPosition.size();i++){
+
+                                if(getDistance(markerLatLng,pokemonPosition.get(i))<200){
+
+                                    String markerText = "";
+
+                                    if(pokemonHeatList.get(i).getFoundTime()==0){
+                                        markerText = new DateTime(pokemonHeatList.get(i).getExpires()-900000).toString(DateTimeFormat.forPattern("dd.MM.yyyy HH:mm:ss"));
+                                    } else {
+                                        markerText = new DateTime(pokemonHeatList.get(i).getFoundTime()).toString(DateTimeFormat.forPattern("dd.MM.yyyy HH:mm:ss"))+" (Found)";
+                                    }
+
+                                    MarkerOptions newMarkerOptions = new MarkerOptions()
+                                            .draggable(true)
+                                            .title(pokemonHeatList.get(i).getFormalName(myContext))
+                                            .snippet(markerText)
+                                            .position(pokemonPosition.get(i));
+
+                                    String title = newMarkerOptions.getSnippet();
+
+                                    for(int j = 0;j<markerHeatList.size();j++){
+                                        if(markerHeatList.get(j).getPosition().equals(newMarkerOptions.getPosition())){
+                                            title = markerHeatList.get(j).getSnippet()+"\n"+newMarkerOptions.getSnippet();
+                                            markerHeatList.remove(j);
+                                        }
+                                    }
+                                    newMarkerOptions.snippet(title);
+
+                                    markerHeatList.add(newMarkerOptions);
+
+                                }
+
+                            }
+
+                            for(int i = 0;i<markerHeatList.size();i++){
+                                mMap.addMarker(markerHeatList.get(i));
+                            }
+                        }
+                    });
 
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            final ArrayList<LatLng> pokemonPosition = new ArrayList<LatLng>();
+                            pokemonPosition = new ArrayList<LatLng>();
+                            pokemonHeatList = new ArrayList<Pokemons>();
                             Gson gson = new Gson();
 
                             radioButtonID = radioGroupHeatMap.getCheckedRadioButtonId();
@@ -1064,6 +1155,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     @Override
                                     public void run() {
                                         heatProgressOverlay.setVisibility(View.INVISIBLE);
+                                        heatProgress.setVisibility(View.INVISIBLE);
                                         heatProgress.hide();
                                     }
                                 });
@@ -1086,6 +1178,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     public void run() {
                                         showToast(R.string.noFileHeat);
                                         heatProgressOverlay.setVisibility(View.INVISIBLE);
+                                        heatProgress.setVisibility(View.INVISIBLE);
                                         heatProgress.hide();
                                     }
                                 });
@@ -1093,19 +1186,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 return;
                             }
 
+
+
                             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
                             String receiveString = "";
-                            StringBuilder stringBuilder = new StringBuilder();
 
                             try {
                                 while ( (receiveString = bufferedReader.readLine()) != null ) {
                                     JsonReader reader = new JsonReader(new StringReader(receiveString));
                                     reader.setLenient(true);
-                                    Pokemons pokemons = gson.fromJson(reader, new TypeToken<Pokemons>() {
+                                    final Pokemons pokemons = gson.fromJson(reader, new TypeToken<Pokemons>() {
                                     }.getType());
 
                                     if(pokemons.getNumber()==selectedPokemon){
                                         pokemonPosition.add(new LatLng(pokemons.getLatitude(), pokemons.getLongitude()));
+                                        pokemonHeatList.add(pokemons);
+
                                     }
                                 }
 
@@ -1114,6 +1210,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         @Override
                                         public void run() {
                                             heatProgressOverlay.setVisibility(View.INVISIBLE);
+                                            heatProgress.setVisibility(View.INVISIBLE);
                                             heatProgress.hide();
                                             mOverlay.remove();
                                             builderHeatMap.dismiss();
@@ -1124,18 +1221,18 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     return;
                                 }
 
-                                final HeatmapTileProvider mProvider = new HeatmapTileProvider.Builder()
+                                mHeatProvider = new HeatmapTileProvider.Builder()
                                         .data(pokemonPosition)
                                         .build();
                                 if(mOverlay!=null){
-                                    mProvider.setData(pokemonPosition);
+                                    mHeatProvider.setData(pokemonPosition);
                                     runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
 
                                             mOverlay.remove();
-                                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
-                                            showToast(pokemonPosition.size()+" "+((RadioButton)radioGroupHeatMap.getChildAt(selectedPokemon)).getText()+" were found");
+                                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mHeatProvider));
+                                            showToast(pokemonPosition.size()+" "+((RadioButton)radioGroupHeatMap.getChildAt(selectedPokemon)).getText().toString().split(" ")[0]+" were found");
                                         }
                                     });
                                 } else {
@@ -1143,8 +1240,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         @Override
                                         public void run() {
 
-                                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mProvider));
-                                            showToast(pokemonPosition.size()+" "+((RadioButton)radioGroupHeatMap.getChildAt(selectedPokemon)).getText()+" were found");
+                                            mOverlay = mMap.addTileOverlay(new TileOverlayOptions().tileProvider(mHeatProvider));
+                                            showToast(pokemonPosition.size()+" "+((RadioButton)radioGroupHeatMap.getChildAt(selectedPokemon)).getText().toString().split(" ")[0]+" were found");
                                         }
                                     });
                                 }
@@ -1152,6 +1249,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     @Override
                                     public void run() {
                                         heatProgressOverlay.setVisibility(View.INVISIBLE);
+                                        heatProgress.setVisibility(View.INVISIBLE);
                                         heatProgress.hide();
                                     }
                                 });
@@ -1163,9 +1261,107 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }).start();
                 }
             });
+            btnConfirm.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View view) {
+                    final DilatingDotsProgressBar heatProgress = (DilatingDotsProgressBar) dialoglayoutHeatMap.findViewById(R.id.heatProgress);
+                    final Button heatProgressOverlay = (Button) dialoglayoutHeatMap.findViewById(R.id.heatProgressOverlay);
+                    final RadioGroup radioGroup = (RadioGroup) dialoglayoutHeatMap.findViewById(R.id.radioGroupHeat);
+                    final int[] numberOfPokemons = new int[152];
+
+                    heatProgressOverlay.setVisibility(View.VISIBLE);
+                    heatProgress.setVisibility(View.VISIBLE);
+                    heatProgress.show();
+
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            File file = new File(getFilesDir(), "pokeList.txt");
+                            FileInputStream fin = null;
+                            try {
+                                fin = new FileInputStream(file);
+                            } catch (FileNotFoundException e) {
+                                e.printStackTrace();
+                            }
+
+                            if(fin == null){
+
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        showToast(R.string.noFileHeat);
+                                        heatProgressOverlay.setVisibility(View.INVISIBLE);
+                                        heatProgress.setVisibility(View.INVISIBLE);
+                                        heatProgress.hide();
+                                    }
+                                });
+                                builderHeatMap.dismiss();
+                                return;
+                            }
+
+                            Gson gson = new Gson();
+
+                            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
+                            String receiveString = "";
+
+                            try {
+                                while ( (receiveString = bufferedReader.readLine()) != null ) {
+                                    JsonReader reader = new JsonReader(new StringReader(receiveString));
+                                    reader.setLenient(true);
+                                    final Pokemons pokemons = gson.fromJson(reader, new TypeToken<Pokemons>() {
+                                    }.getType());
+
+                                    numberOfPokemons[pokemons.getNumber()]++;
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+
+
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        for(int i = 1;i<radioGroup.getChildCount();i++) {
+                                            RadioButton tempRadioButton = (RadioButton) radioGroup.getChildAt(i);
+                                            tempRadioButton.setText(tempRadioButton.getText().toString().split(" ")[0] + " (" + numberOfPokemons[i] + ")");
+                                        }
+                                    }
+                                });
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    heatProgressOverlay.setVisibility(View.INVISIBLE);
+                                    heatProgress.setVisibility(View.INVISIBLE);
+                                    heatProgress.hide();
+                                }
+                            });
+                        }
+
+                    }).start();
+
+
+
+                    return true;
+                }
+            });
+
+
         }
 
 
+    public float getDistance(LatLng arg1, LatLng arg2){
+        Location location1 = new Location("");
+        location1.setLatitude(arg1.latitude);
+        location1.setLongitude(arg1.longitude);
+
+        Location location2 = new Location("");
+        location2.setLatitude(arg2.latitude);
+        location2.setLongitude(arg2.longitude);
+
+
+        return location1.distanceTo(location2);
+    }
 
     public void createHeatMapList() {
         LayoutInflater inflater = getLayoutInflater();
@@ -1360,6 +1556,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         }
                     }
                 }
+                if(markerKey == null){
+                    markerKey = marker;
+                }
+
                 if (markerKey != null) {
                     if (!Settings.get(MapsActivity.this).isUseOldMapMarker()) {
                         removeAdapterAndListener();
@@ -1440,7 +1640,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     pokemonsMarkerMap = new ArrayMap<Pokemons, Marker>();
 
                     mMap.clear();
-                    showToast(R.string.cleared_map);
+                   // showToast(R.string.cleared_map);
                 }
             });
 
@@ -1503,6 +1703,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     snippet.setText(MapsActivity.this.getText(R.string.expires_in) + DrawableUtils.getExpireTime(((Pokemons) markerKey).getExpires()));
                 } else {
                     snippet.setText(marker.getSnippet());
+                    info.addView(title);
+                    info.addView(snippet);
+                    return info;
                 }
 
                 TextView navigate = new TextView(MapsActivity.this);

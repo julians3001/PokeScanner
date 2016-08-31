@@ -7,27 +7,8 @@ xmlns:app="http://schemas.android.com/apk/res-auto"
 android:layout_width="match_parent"
 android:layout_height="match_parent">
 
-    <com.zl.reik.dilatingdotsprogressbar.DilatingDotsProgressBar
-        android:id="@+id/heatProgress"
 
-        android:layout_marginTop="200dp"
-        android:layout_marginLeft="40dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:radius="5dp"
-        android:color="@color/colorPrimary"
-        app:dd_numDots="10"
-        app:dd_scaleMultiplier="1.5"
-        app:dd_animationDuration="500"
-        app:dd_horizontalSpacing="15dp"
-        />
-    <Button
-        android:id="@+id/heatProgressOverlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#d3555555"
-        android:visibility="invisible"
-        android:elevation="@null"/>
+
 
 
 
@@ -49,6 +30,7 @@ android:layout_height="match_parent">
                 android:layout_width="0dp"
                 android:layout_height="fill_parent"
                 android:text="@string/cancel"
+                android:textSize="10dp"
                 android:id="@+id/btnCancel"
                 android:layout_gravity="center_horizontal"
                 android:layout_weight="1"
@@ -58,6 +40,7 @@ android:layout_height="match_parent">
                 android:layout_width="0dp"
                 android:layout_height="fill_parent"
                 android:text="Datei löschen"
+                android:textSize="10dp"
                 android:id="@+id/btnDelete"
                 android:layout_gravity="center_horizontal"
                 android:layout_weight="1"
@@ -67,6 +50,7 @@ android:layout_height="match_parent">
             <Button
                 android:layout_width="0dp"
                 android:layout_height="fill_parent"
+                android:textSize="10dp"
                 android:text="@string/save"
                 android:id="@+id/btnAccept"
                 android:layout_gravity="center_horizontal"
@@ -98,8 +82,28 @@ android:layout_height="match_parent">
         </ScrollView>
 
     </LinearLayout>
+    <Button
+        android:id="@+id/heatProgressOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#d3555555"
+        android:visibility="invisible"
+        android:stateListAnimator="@null"/>
 
+    <com.zl.reik.dilatingdotsprogressbar.DilatingDotsProgressBar
+        android:id="@+id/heatProgress"
 
+        android:layout_marginTop="200dp"
+        android:layout_marginStart="50dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:radius="5dp"
+        android:color="@color/colorPrimary"
+        app:dd_numDots="10"
+        app:dd_scaleMultiplier="1.5"
+        app:dd_animationDuration="500"
+        app:dd_horizontalSpacing="15dp"
+        />
 
 
 

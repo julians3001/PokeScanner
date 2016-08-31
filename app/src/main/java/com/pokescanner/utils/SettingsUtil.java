@@ -49,7 +49,7 @@ public class SettingsUtil {
         tvNumber.setText(String.valueOf(scanValue));
         tvEstimate.setText(context.getString(R.string.timeEstimate) + " " + UiUtils.getSearchTime(scanValue,context));
         seekBar.setProgress(scanValue);
-        seekBar.setMax(12);
+        seekBar.setMax(24);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {

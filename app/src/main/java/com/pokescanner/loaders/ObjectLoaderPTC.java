@@ -110,7 +110,7 @@ public class ObjectLoaderPTC extends Thread {
                             final Collection<FortDataOuterClass.FortData> collectionGyms = event.getGyms();
                             final Collection<Pokestop> collectionPokeStops = event.getPokestops();
 
-                            EventBus.getDefault().post(new ScanCircleEvent(pos));
+                            EventBus.getDefault().post(new ScanCircleEvent(pos,user.getAccountColor()));
 
                             realm = Realm.getDefaultInstance();
                             realm.executeTransaction(new Realm.Transaction() {
@@ -118,6 +118,12 @@ public class ObjectLoaderPTC extends Thread {
                                 public void execute(Realm realm) {
                                     for (MapPokemonOuterClass.MapPokemon pokemonOut : collectionPokemon){
                                         Pokemons pokemon = new Pokemons(pokemonOut);
+
+                                        if(pokemon.getExpires()<0){
+                                            long currentTime = System.currentTimeMillis();
+                                            pokemon.setExpires(currentTime+900000);
+                                            pokemon.setFoundTime(currentTime);
+                                        }
 
                                         ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
                                         try {
