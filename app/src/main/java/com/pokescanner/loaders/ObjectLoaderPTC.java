@@ -80,24 +80,34 @@ public class ObjectLoaderPTC extends Thread {
     @Override
     public void run() {
         try {
-            OkHttpClient client = new OkHttpClient();
-            //Create our provider and set it to null
             CredentialProvider provider = null;
-            //Is our user google or PTC?
-            if (user.getAuthType() == User.GOOGLE) {
-                if (user.getToken() != null) {
-                    provider = new GoogleUserCredentialProvider(client, user.getToken().getRefreshToken());
+
+
+            if(MultiAccountLoader.cachedGo[position]==null) {
+                OkHttpClient client = new OkHttpClient();
+                //Create our provider and set it to null
+
+                //Is our user google or PTC?
+                if (user.getAuthType() == User.GOOGLE) {
+                    if (user.getToken() != null) {
+                        provider = new GoogleUserCredentialProvider(client, user.getToken().getRefreshToken());
+                    } else {
+                        EventBus.getDefault().post(new ForceLogoutEvent());
+                    }
                 } else {
-                    EventBus.getDefault().post(new ForceLogoutEvent());
+                    provider = new PtcCredentialProvider(client, user.getUsername(), user.getPassword());
                 }
-            } else {
-                provider = new PtcCredentialProvider(client, user.getUsername(), user.getPassword());
+
+                if (provider != null) {
+                    MultiAccountLoader.cachedGo[position] = new PokemonGo(provider, client);
+                }
             }
 
-            if (provider != null) {
+            PokemonGo go = MultiAccountLoader.cachedGo[position];
+
                 int scanPos = 0;
 
-                PokemonGo go = new PokemonGo(provider, client);
+
 
                 if (go != null) {
                     for (LatLng pos : scanMap) {
@@ -118,14 +128,21 @@ public class ObjectLoaderPTC extends Thread {
                                 public void execute(Realm realm) {
                                     for (MapPokemonOuterClass.MapPokemon pokemonOut : collectionPokemon){
                                         Pokemons pokemon = new Pokemons(pokemonOut);
-
+                                        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+                                        boolean alreadyNotificated = false;
                                         if(pokemon.getExpires()<0){
                                             long currentTime = System.currentTimeMillis();
                                             pokemon.setExpires(currentTime+900000);
                                             pokemon.setFoundTime(currentTime);
+                                            for(Pokemons allPokemon : pokelist){
+                                                if(allPokemon.getEncounterid()==pokemon.getEncounterid()){
+                                                    alreadyNotificated = true;
+                                                    break;
+                                                }
+                                            }
                                         }
 
-                                        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+
                                         try {
                                             if(!pokelist.contains(pokemon)){
                                                 savePokemonToFile(pokemon);
@@ -134,7 +151,7 @@ public class ObjectLoaderPTC extends Thread {
                                             e.printStackTrace();
                                         }
                                         realm.copyToRealmOrUpdate(pokemon);
-                                        if(UiUtils.isPokemonNotification(pokemon)&&!pokelist.contains(pokemon)){
+                                        if(UiUtils.isPokemonNotification(pokemon)&&!pokelist.contains(pokemon)&&!alreadyNotificated){
 
                                             Intent launchIntent = new Intent(context, MapsActivity.class);
                                             launchIntent.setAction(Long.toString(System.currentTimeMillis()));
@@ -185,7 +202,6 @@ public class ObjectLoaderPTC extends Thread {
                             Thread.sleep(SLEEP_TIME);
                     }
                 }
-            }
         } catch (InterruptedException e) {
             e.printStackTrace();
             System.out.println("ObjectLoader: " + user.getUsername());
@@ -197,7 +213,8 @@ public class ObjectLoaderPTC extends Thread {
             System.out.println("ObjectLoader: " + user.getUsername());
         }catch (AsyncPokemonGoException e) {
             e.printStackTrace();
-            System.out.println("ObjectLoader: " + user.getUsername());
+            MultiAccountLoader.cachedGo = new PokemonGo[40];
+            System.out.println("AsyncPokemonGo: " + user.getUsername());
         }
     }
 

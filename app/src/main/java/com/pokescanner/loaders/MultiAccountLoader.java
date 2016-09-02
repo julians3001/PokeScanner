@@ -6,6 +6,7 @@ import android.preference.PreferenceManager;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.maps.model.LatLng;
+import com.pokegoapi.api.PokemonGo;
 import com.pokescanner.helper.MyPartition;
 import com.pokescanner.objects.User;
 
@@ -24,6 +25,7 @@ public class MultiAccountLoader {
     static public GoogleApiClient mGoogleApiClient;
     static private Context context;
     static public boolean autoScan = false;
+    static public PokemonGo[] cachedGo = new PokemonGo[40];
 
     static public void startThreads() {
         scanMaps = new ArrayList<>();
