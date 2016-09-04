@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 
@@ -45,6 +46,7 @@ import com.pokescanner.utils.UiUtils;
 
 import org.greenrobot.eventbus.EventBus;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -220,8 +222,13 @@ public class ObjectLoaderPTC extends Thread {
 
     private void savePokemonToFile(Pokemons pokemons) throws IOException {
 
+        if(!isExternalStorageWritable()){
+            return;
+        }
 
-        FileOutputStream fOut = context.openFileOutput("pokeList.txt",Context.MODE_APPEND);
+        System.out.println(context.getExternalFilesDir(null));
+        File file = new File(context.getExternalFilesDir(null), "pokeList.txt");
+        FileOutputStream fOut = new FileOutputStream(file, true);
 
         Gson gson = new Gson();
 
@@ -237,6 +244,17 @@ public class ObjectLoaderPTC extends Thread {
             e.printStackTrace();
         }
     }
+
+    /* Checks if external storage is available for read and write */
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+
 
     private void sendPokemonListToWear(){
         ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));

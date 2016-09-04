@@ -19,6 +19,7 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Vibrator;
@@ -76,6 +77,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
+import com.pokegoapi.api.PokemonGo;
 import com.pokescanner.events.ForceLogoutEvent;
 import com.pokescanner.events.ForceRefreshEvent;
 import com.pokescanner.events.InterruptedExecptionEvent;
@@ -387,6 +389,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
                     //Set our map
                     MultiAccountLoader.setScanMap(scanMap);
+                    MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
@@ -407,6 +410,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             Intent intentService = new Intent(this, AutoScanService.class);
             intentService.putExtra("mode",0);
+            //startService(intentService);
             bindService(intentService,mConnection,Context.BIND_AUTO_CREATE);
             StartStopSendToWear(true, scanMap.size());
         } else {
@@ -414,6 +418,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             Intent intentService = new Intent(this, AutoScanService.class);
             try{
                 unbindService(mConnection);
+               // stopService(intentService);
             } catch (Exception e){
                 e.printStackTrace();
             }
@@ -460,6 +465,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
                     //Set our map
                     MultiAccountLoader.setScanMap(scanMap);
+                    MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
@@ -554,6 +560,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
+                    MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set Context
                     MultiAccountLoader.setContext(this);
                     //Begin our threads???
@@ -572,6 +579,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @OnClick(R.id.btnSettings)
     public void onSettingsClick() {
+        MultiAccountLoader.setContext(this);
+        MultiAccountLoader.setmGoogleApiClient(mGoogleApiClient);
         Intent settingsIntent = new Intent(MapsActivity.this, SettingsActivity.class);
         startActivity(settingsIntent);
     }
@@ -940,7 +949,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onStop() {
 
         EventBus.getDefault().unregister(this);
-        mGoogleApiClient.disconnect();
+        //mGoogleApiClient.disconnect();
         //mGoogleWearApiClient.disconnect();
         super.onStop();
 
@@ -950,6 +959,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onDestroy() {
         realm.close();
+
+
         super.onDestroy();
     }
 
@@ -1047,7 +1058,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             switch (which){
                                 case DialogInterface.BUTTON_POSITIVE:
                                     //Yes button clicked
-                                    File file = new File(getFilesDir(), "pokeList.txt");
+                                    File file = new File(getExternalFilesDir(null), "pokeList.txt");
                                     file.delete();
                                     break;
 
@@ -1163,7 +1174,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 return;
                             }
 
-                            File file = new File(getFilesDir(), "pokeList.txt");
+                            if(!isExternalStorageReadable()){
+                                return;
+                            }
+                            File file = new File(getExternalFilesDir(null), "pokeList.txt");
                             FileInputStream fin = null;
                             try {
                                 fin = new FileInputStream(file);
@@ -1276,7 +1290,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            File file = new File(getFilesDir(), "pokeList.txt");
+                            if(!isExternalStorageReadable()){
+                                return;
+                            }
+
+                            File file = new File(getExternalFilesDir(null), "pokeList.txt");
                             FileInputStream fin = null;
                             try {
                                 fin = new FileInputStream(file);
@@ -1348,6 +1366,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
         }
+
+    public boolean isExternalStorageReadable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state) ||
+                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            return true;
+        }
+        return false;
+    }
 
 
     public float getDistance(LatLng arg1, LatLng arg2){

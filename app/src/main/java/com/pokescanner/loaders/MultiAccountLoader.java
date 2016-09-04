@@ -23,7 +23,7 @@ public class MultiAccountLoader {
     static private ArrayList<User> users;
     static private int SLEEP_TIME;
     static public GoogleApiClient mGoogleApiClient;
-    static private Context context;
+    static public Context context;
     static public boolean autoScan = false;
     static public PokemonGo[] cachedGo = new PokemonGo[40];
 
