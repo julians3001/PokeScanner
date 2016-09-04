@@ -126,6 +126,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
@@ -134,6 +135,7 @@ import butterknife.OnClick;
 import butterknife.OnLongClick;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
+import io.realm.RealmResults;
 import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
@@ -226,9 +228,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     //Used for our refreshing of the map
     Subscription pokeonRefresher;
     Subscription gymstopRefresher;
+    Realm realmDataBase;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        RealmConfiguration realmDatabaseConfiguration = new RealmConfiguration.Builder(this,getExternalFilesDir(null)).build();
+        realmDataBase = Realm.getInstance(realmDatabaseConfiguration);
+
         mConnection = new ServiceConnection() {
 
             @Override
@@ -959,7 +965,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onDestroy() {
         realm.close();
-
+        realmDataBase.close();
 
         super.onDestroy();
     }
@@ -1058,8 +1064,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             switch (which){
                                 case DialogInterface.BUTTON_POSITIVE:
                                     //Yes button clicked
-                                    File file = new File(getExternalFilesDir(null), "pokeList.txt");
-                                    file.delete();
+                                    realmDataBase.executeTransaction(new Realm.Transaction() {
+                                        @Override
+                                        public void execute(Realm realm) {
+                                            realm.where(Pokemons.class).findAll().deleteAllFromRealm();
+
+                                        }
+                                    });
                                     break;
 
                                 case DialogInterface.BUTTON_NEGATIVE:
@@ -1177,46 +1188,25 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             if(!isExternalStorageReadable()){
                                 return;
                             }
-                            File file = new File(getExternalFilesDir(null), "pokeList.txt");
-                            FileInputStream fin = null;
+
+
+
+                            final Semaphore mutex = new Semaphore(0);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    pokemonHeatList = new ArrayList<Pokemons>(realmDataBase.copyFromRealm(realmDataBase.where(Pokemons.class).equalTo("Number",selectedPokemon).findAll()));
+                                    mutex.release();
+                                }
+                            });
                             try {
-                                fin = new FileInputStream(file);
-                            } catch (FileNotFoundException e) {
+                                mutex.acquire();
+                            } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
 
-                            if(fin == null){
-
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        showToast(R.string.noFileHeat);
-                                        heatProgressOverlay.setVisibility(View.INVISIBLE);
-                                        heatProgress.setVisibility(View.INVISIBLE);
-                                        heatProgress.hide();
-                                    }
-                                });
-                                builderHeatMap.dismiss();
-                                return;
-                            }
-
-
-
-                            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
-                            String receiveString = "";
-
-                            try {
-                                while ( (receiveString = bufferedReader.readLine()) != null ) {
-                                    JsonReader reader = new JsonReader(new StringReader(receiveString));
-                                    reader.setLenient(true);
-                                    final Pokemons pokemons = gson.fromJson(reader, new TypeToken<Pokemons>() {
-                                    }.getType());
-
-                                    if(pokemons.getNumber()==selectedPokemon){
-                                        pokemonPosition.add(new LatLng(pokemons.getLatitude(), pokemons.getLongitude()));
-                                        pokemonHeatList.add(pokemons);
-
-                                    }
+                                for(Pokemons pokeElement: pokemonHeatList){
+                                    pokemonPosition.add(new LatLng(pokeElement.getLatitude(), pokeElement.getLongitude()));
                                 }
 
                                 if(pokemonPosition.size()==0){
@@ -1226,7 +1216,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                             heatProgressOverlay.setVisibility(View.INVISIBLE);
                                             heatProgress.setVisibility(View.INVISIBLE);
                                             heatProgress.hide();
-                                            mOverlay.remove();
+                                            if(mOverlay!=null){
+                                                mOverlay.remove();
+                                            }
                                             builderHeatMap.dismiss();
                                             showToast(R.string.noPokeHeat);
                                         }
@@ -1268,9 +1260,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     }
                                 });
                                 builderHeatMap.dismiss();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
+
                         }
                     }).start();
                 }
@@ -1294,52 +1284,28 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 return;
                             }
 
-                            File file = new File(getExternalFilesDir(null), "pokeList.txt");
-                            FileInputStream fin = null;
-                            try {
-                                fin = new FileInputStream(file);
-                            } catch (FileNotFoundException e) {
-                                e.printStackTrace();
-                            }
 
-                            if(fin == null){
-
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        showToast(R.string.noFileHeat);
-                                        heatProgressOverlay.setVisibility(View.INVISIBLE);
-                                        heatProgress.setVisibility(View.INVISIBLE);
-                                        heatProgress.hide();
-                                    }
-                                });
-                                builderHeatMap.dismiss();
-                                return;
-                            }
-
-                            Gson gson = new Gson();
-
-                            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fin));
-                            String receiveString = "";
-
-                            try {
-                                while ( (receiveString = bufferedReader.readLine()) != null ) {
-                                    JsonReader reader = new JsonReader(new StringReader(receiveString));
-                                    reader.setLenient(true);
-                                    final Pokemons pokemons = gson.fromJson(reader, new TypeToken<Pokemons>() {
-                                    }.getType());
-
-                                    numberOfPokemons[pokemons.getNumber()]++;
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    realmDataBase.executeTransaction(new Realm.Transaction() {
+                                        @Override
+                                        public void execute(Realm realm) {
+                                            for(int i = 1;i<numberOfPokemons.length;i++){
+                                                ArrayList<Pokemons> tempPokelist = new ArrayList<Pokemons>(realm.where(Pokemons.class).equalTo("Number",i).findAll());
+                                                numberOfPokemons[i] = tempPokelist.size();
+                                            }
+                                        }
+                                    });
                                 }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
+                            });
 
 
-                                runOnUiThread(new Runnable() {
+                            runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
                                         for(int i = 1;i<radioGroup.getChildCount();i++) {
+
                                             RadioButton tempRadioButton = (RadioButton) radioGroup.getChildAt(i);
                                             tempRadioButton.setText(tempRadioButton.getText().toString().split(" ")[0] + " (" + numberOfPokemons[i] + ")");
                                         }

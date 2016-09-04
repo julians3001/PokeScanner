@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 
@@ -57,6 +58,7 @@ import java.util.List;
 import POGOProtos.Map.Fort.FortDataOuterClass;
 import POGOProtos.Map.Pokemon.MapPokemonOuterClass;
 import io.realm.Realm;
+import io.realm.RealmConfiguration;
 import okhttp3.OkHttpClient;
 
 public class ObjectLoaderPTC extends Thread {
@@ -106,6 +108,9 @@ public class ObjectLoaderPTC extends Thread {
             }
 
             PokemonGo go = MultiAccountLoader.cachedGo[position];
+            if(go == null){
+                return;
+            }
 
                 int scanPos = 0;
 
@@ -220,29 +225,23 @@ public class ObjectLoaderPTC extends Thread {
         }
     }
 
-    private void savePokemonToFile(Pokemons pokemons) throws IOException {
+    private void savePokemonToFile(final Pokemons pokemons) throws IOException {
 
         if(!isExternalStorageWritable()){
             return;
         }
-
-        System.out.println(context.getExternalFilesDir(null));
-        File file = new File(context.getExternalFilesDir(null), "pokeList.txt");
-        FileOutputStream fOut = new FileOutputStream(file, true);
-
-        Gson gson = new Gson();
-
-        try {
-            OutputStreamWriter myOutWriter =
-                    new OutputStreamWriter(fOut);
-            String json = gson.toJson(pokemons,new TypeToken<Pokemons>() {}.getType());
-            //System.out.println("User: " + user.getUsername()+ " Pokename: "+json);
-            myOutWriter.append(json+"\n");
-            myOutWriter.close();
-            fOut.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        RealmConfiguration realmConfiguration = new RealmConfiguration.Builder(context,context.getExternalFilesDir(null)).build();
+        Realm realm = Realm.getInstance(realmConfiguration);
+        realm.executeTransaction(new Realm.Transaction() {
+            @Override
+            public void execute(Realm realm) {
+                ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+                if(!pokelist.contains(pokemons)){
+                    realm.copyToRealmOrUpdate(pokemons);
+                }
+            }
+        });
+        realm.close();
     }
 
     /* Checks if external storage is available for read and write */
