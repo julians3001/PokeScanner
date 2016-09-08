@@ -1,9 +1,11 @@
 package com.pokescanner.multiboxing;
 
+import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.res.TypedArray;
@@ -14,6 +16,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -70,12 +73,14 @@ public class MultiboxingActivity extends AppCompatActivity implements
     private MultiboxingAdapter userAdapter;
 
     private Realm realm;
+    private final static int STORAGE_PERMISSION_REQUESTED = 1300;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
+        getReadWritePermission();
         setContentView(R.layout.activity_multiboxing);
         ButterKnife.bind(this);
 
@@ -130,6 +135,26 @@ public class MultiboxingActivity extends AppCompatActivity implements
         userList.clear();
         userList.addAll(realm.copyFromRealm(realm.where(User.class).findAll()));
         userAdapter.notifyDataSetChanged();
+    }
+
+    public void getReadWritePermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+            dialog.setCancelable(false)
+                    .setMessage(R.string.Permission_Required_Auto_Updater)
+                    .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            ActivityCompat.requestPermissions(MultiboxingActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                    Manifest.permission.READ_EXTERNAL_STORAGE}, STORAGE_PERMISSION_REQUESTED);
+                        }
+                    })
+                    .show();
+        } else {
+            ActivityCompat.requestPermissions(MultiboxingActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_EXTERNAL_STORAGE}, STORAGE_PERMISSION_REQUESTED);
+        }
     }
 
     @Override

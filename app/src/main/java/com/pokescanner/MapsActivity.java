@@ -252,7 +252,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }
         };
         instance = this;
-        createHeatMapList();
         mGoogleWearApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
                     @Override
@@ -286,6 +285,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .build();
         Realm.setDefaultConfiguration(realmConfiguration);
         realm = Realm.getDefaultInstance();
+
+        createHeatMapList();
 
         //So if our realm has no users then we'll send our user back to the login screen
         //otherwise set our user and move on!

@@ -102,6 +102,7 @@ public class SplashScreenActivity extends AppCompatActivity {
     }
 
     private void checkRequirementsAndInitialize()  {
+
         if (isConnectedToTheInternet()) {
             if (checkGooglePlayServicesAvailable()) {
                 if (getLocationPermission()) {
@@ -174,7 +175,7 @@ public class SplashScreenActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{
                     android.Manifest.permission.ACCESS_FINE_LOCATION,
                     android.Manifest.permission.ACCESS_COARSE_LOCATION,}, LOCATION_PERMISSION_REQUESTED);
-            return false;
+                    return false;
         }
         return true;
     }
