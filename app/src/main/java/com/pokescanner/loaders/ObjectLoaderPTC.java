@@ -12,6 +12,7 @@ import android.os.Environment;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
+import android.util.Log;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
@@ -71,6 +72,7 @@ public class ObjectLoaderPTC extends Thread {
     Context context;
     int progressBar;
     ArrayList<Pokemons> listout;
+    Realm realmDataBase;
 
     public ObjectLoaderPTC(User user, List<LatLng> scanMap, int SLEEP_TIME, int pos, GoogleApiClient mGoogleWearApiClient, Context context) {
         this.user = user;
@@ -230,18 +232,29 @@ public class ObjectLoaderPTC extends Thread {
         if(!isExternalStorageWritable()){
             return;
         }
-        RealmConfiguration realmConfiguration = new RealmConfiguration.Builder(context,context.getExternalFilesDir(null)).build();
-        Realm realm = Realm.getInstance(realmConfiguration);
-        realm.executeTransaction(new Realm.Transaction() {
+        openRealm();
+        realmDataBase.executeTransaction(new Realm.Transaction() {
             @Override
-            public void execute(Realm realm) {
-                ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+            public void execute(Realm realmDataBase) {
+                ArrayList<Pokemons> pokelist = new ArrayList<>(realmDataBase.copyFromRealm(realmDataBase.where(Pokemons.class).findAll()));
                 if(!pokelist.contains(pokemons)){
-                    realm.copyToRealmOrUpdate(pokemons);
+                    realmDataBase.copyToRealmOrUpdate(pokemons);
                 }
             }
         });
-        realm.close();
+        realmDataBase.close();
+    }
+    private void openRealm() {
+        File file = new File(Environment.getExternalStorageDirectory()+"/Pokescanner/Db/");
+
+        if (!file.exists()) {
+            boolean result = file.mkdirs();
+            Log.e("TTT", "Results: " + result);
+        }
+        RealmConfiguration realmDatabaseConfiguration = new RealmConfiguration.Builder(file)
+                .name("pokemondatabase" + ".realm")
+                .build();
+        realmDataBase = Realm.getInstance(realmDatabaseConfiguration);
     }
 
     /* Checks if external storage is available for read and write */

@@ -232,8 +232,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        RealmConfiguration realmDatabaseConfiguration = new RealmConfiguration.Builder(this,getExternalFilesDir(null)).build();
-        realmDataBase = Realm.getInstance(realmDatabaseConfiguration);
+
 
         mConnection = new ServiceConnection() {
 
@@ -1020,10 +1019,29 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    private void openRealm() {
+        File file = new File(Environment.getExternalStorageDirectory()+"/Pokescanner/Db/");
+
+        if (!file.exists()) {
+            boolean result = file.mkdirs();
+            Log.e("TTT", "Results: " + result);
+        }
+        RealmConfiguration realmDatabaseConfiguration = new RealmConfiguration.Builder(file)
+                .name("pokemondatabase" + ".realm")
+                .build();
+        realmDataBase = Realm.getInstance(realmDatabaseConfiguration);
+    }
+
     @OnClick(R.id.btnHeatMapMode)
     public void createHeatMap(){
         floatingActionMenu.close(false);
-
+        openRealm();
+        builderHeatMap.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialogInterface) {
+                realmDataBase.close();
+            }
+        });
         if (radioButtonID == 0) {
             radioGroupHeatMap.check(R.id.radioButtonNoHeatmap);
         } else {
@@ -1417,6 +1435,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         View dialoglayout = inflater.inflate(R.layout.dialog_search_address, null);
         final AlertDialog builder = new AlertDialog.Builder(this).create();
 
+
         final EditText etAddress = (EditText) dialoglayout.findViewById(R.id.etAddress);
         Button btnSearch = (Button) dialoglayout.findViewById(R.id.btnSearch);
         Button btnCancel = (Button) dialoglayout.findViewById(R.id.btnCancel);
@@ -1645,6 +1664,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @OnClick(R.id.btnCenterCamera)
     public void btnCenterCamer(){
+        floatingActionMenu.close(true);
         moveCameraToCurrentPosition(true);
     }
     @OnLongClick(R.id.btnClear)
