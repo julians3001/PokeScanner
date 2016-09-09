@@ -51,6 +51,9 @@
         <activity android:name=".multiboxing.MultiboxingActivity"
             android:windowSoftInputMode="adjustPan|adjustResize"
             android:screenOrientation="portrait"/>
+        <activity android:name=".OverlayMapsActivity"
+            android:windowSoftInputMode="adjustPan|adjustResize"
+            android:screenOrientation="portrait"/>
 
         <activity
             android:name=".GoogleLoginActivity"
@@ -115,6 +118,9 @@
         </service>
         <service
             android:name=".service.AutoScanService"
+            android:exported="false"/>
+        <service
+            android:name=".service.OverlayService"
             android:exported="false"/>
     </application>
 

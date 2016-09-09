@@ -1,6 +1,7 @@
 package com.pokescanner;
 
 import android.annotation.TargetApi;
+import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -98,6 +99,7 @@ import com.pokescanner.objects.PokeStop;
 import com.pokescanner.objects.Pokemons;
 import com.pokescanner.objects.User;
 import com.pokescanner.service.AutoScanService;
+import com.pokescanner.service.OverlayService;
 import com.pokescanner.settings.Settings;
 import com.pokescanner.settings.SettingsActivity;
 import com.pokescanner.utils.DrawableUtils;
@@ -273,7 +275,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 .addApi(Wearable.API)
                 .addApi(LocationServices.API)
                 .build();
-
+        MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
         MultiDex.install(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
@@ -297,7 +299,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (CustomMapFragment) getSupportFragmentManager()
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
@@ -319,23 +321,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
 
-        /*Intent launchIntent = new Intent(this, MapsActivity.class);
-
-        PendingIntent pIntent = PendingIntent.getActivity(MapsActivity.this, 0,   launchIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-
-        Bitmap largeIcon = BitmapFactory.decodeResource(getResources(), R.drawable.icon);
-        NotificationCompat.Builder mBuilder =
-                (NotificationCompat.Builder) new NotificationCompat.Builder(this)
-                        .setSmallIcon(R.drawable.ic_track_changes_white_24dp)
-                        .setLargeIcon(largeIcon)
-                        .setContentTitle("Pokéscanner started")
-                        .setContentText("No Pokémon nearby!")
-                        .addAction(R.drawable.ic_refresh_white_36dp,"Start scan!", pIntent);
-        mBuilder.setContentIntent(pIntent).setOngoing(true);
-        NotificationManager mNotificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        // mId allows you to update the notification later on.
-        mNotificationManager.notify(0, mBuilder.build());*/
     }
 
 
@@ -965,7 +950,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onDestroy() {
         realm.close();
-        realmDataBase.close();
+        if(realmDataBase!=null){
+            realmDataBase.close();
+        }
 
         super.onDestroy();
     }
@@ -1665,8 +1652,48 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @OnClick(R.id.btnCenterCamera)
     public void btnCenterCamer(){
         floatingActionMenu.close(true);
-        moveCameraToCurrentPosition(true);
+        //moveCameraToCurrentPosition(true);
+        //checkDrawOverlayPermission();
+        Intent intent = new Intent (this, OverlayMapsActivity.class);
+        startActivity(intent);
     }
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public final static int REQUEST_CODE = 12345;
+
+    @TargetApi(Build.VERSION_CODES.M)
+    public void checkDrawOverlayPermission() {
+        /** check if we already  have permission to draw over other apps */
+        if (!android.provider.Settings.canDrawOverlays(this)) {
+            /** if not construct intent to request permission */
+            Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName()));
+            /** request permission via start activity for result */
+            startActivityForResult(intent, REQUEST_CODE);
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.M)
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode,  Intent data) {
+        /** check if received result code
+         is equal our requested code for draw permission  */
+        if (requestCode == REQUEST_CODE) {
+            /** if so check once again if we have permission */
+            if (android.provider.Settings.canDrawOverlays(this)) {
+                // continue here - permission was granted
+            }
+        }
+    }
+
     @OnLongClick(R.id.btnClear)
     public boolean cleanEntireMap(){
         if (mMap != null) {
