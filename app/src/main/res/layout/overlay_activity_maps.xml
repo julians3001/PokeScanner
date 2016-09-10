@@ -86,6 +86,15 @@
             fab:fab_colorNormal="@color/colorPrimary"
             fab:fab_colorPressed="@color/colorAccent"
             fab:fab_colorRipple="@color/colorPrimaryDark" />
+        <com.github.clans.fab.FloatingActionButton
+            android:id="@+id/btnStopOverlayActivity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/texture"
+            fab:fab_size="mini"
+            fab:fab_colorNormal="@color/colorPrimary"
+            fab:fab_colorPressed="@color/colorAccent"
+            fab:fab_colorRipple="@color/colorPrimaryDark" />
     </com.github.clans.fab.FloatingActionMenu>
 
 

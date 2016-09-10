@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
@@ -33,10 +34,13 @@ import com.pokescanner.MapsActivity;
 import com.pokescanner.OverlayMapsActivity;
 import com.pokescanner.R;
 import com.pokescanner.loaders.MultiAccountLoader;
+import com.pokescanner.settings.Settings;
 import com.pokescanner.utils.PermissionUtils;
 
 import butterknife.BindView;
 import butterknife.OnClick;
+import io.realm.Realm;
+import io.realm.RealmConfiguration;
 
 
 public class SomeFragment extends Fragment implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -44,7 +48,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
 
     FloatingActionButton button;
     ProgressBar progressBar;
-    private GoogleMap mMap;
+    GoogleMap mMap;
     ImageButton btnSettings;
     RelativeLayout main;
     com.github.clans.fab.FloatingActionButton btnSataliteMode;
@@ -52,22 +56,32 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     ImageButton btnAutoScan;
     ImageButton btnHeatMapMode;
     ImageButton btnCenterCamera;
+    ImageButton btnStopOverlayActivity;
+
+    Realm realm;
 
     MapView mapView;
-    GoogleMap map;
     public static SomeFragment someFragment;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.overlay_activity_maps, container, false);
 
+
         // Gets the MapView from the XML layout and creates it
         mapView = (MapView) v.findViewById(R.id.mapview);
+        btnStopOverlayActivity = (ImageButton) v.findViewById(R.id.btnStopOverlayActivity);
+        btnStopOverlayActivity.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                stopOverlayService();
+            }
+        });
         btnCenterCamera = (ImageButton) v.findViewById(R.id.btnOverlayCenterCamera);
         btnCenterCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                btnCenterCamer();
+                btnCenterCamera();
             }
         });
         floatingActionMenu = (FloatingActionMenu) v.findViewById(R.id.floatOverlayActionMenu);
@@ -76,6 +90,14 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
         // Gets to GoogleMap from the MapView and does initialization stuff
         mapView.getMapAsync(this);
         someFragment = this;
+
+        RealmConfiguration realmConfiguration = new RealmConfiguration.Builder(getContext())
+                .name(Realm.DEFAULT_REALM_NAME)
+                .deleteRealmIfMigrationNeeded()
+                .build();
+        Realm.setDefaultConfiguration(realmConfiguration);
+        realm = Realm.getDefaultInstance();
+
 
 
         return v;
@@ -101,20 +123,20 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        map = googleMap;
-        map.getUiSettings().setMyLocationButtonEnabled(false);
+        mMap = googleMap;
+        mMap.getUiSettings().setMyLocationButtonEnabled(false);
         if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
             return;
         }
-        map.setMyLocationEnabled(true);
+        mMap.setMyLocationEnabled(true);
 
         // Needs to call MapsInitializer before doing any CameraUpdateFactory calls
         MapsInitializer.initialize(this.getActivity());
 
         // Updates the location and zoom of the MapView
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(getCurrentLocation(),15);
-        map.animateCamera(cameraUpdate);
+        mMap.animateCamera(cameraUpdate);
     }
 
     @SuppressWarnings({"MissingPermission"})
@@ -148,13 +170,43 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     }
 
 
-    public void btnCenterCamer(){
+    public void stopOverlayService(){
         floatingActionMenu.close(true);
-        //moveCameraToCurrentPosition(true);
-        //checkDrawOverlayPermission();
         Intent intent = new Intent (getContext(), OverlayService.class);
         getContext().stopService(intent);
         Intent activityIntent = new Intent(getContext(), MapsActivity.class);
         startActivity(activityIntent);
+    }
+
+    public void btnCenterCamera(){
+        floatingActionMenu.close(true);
+        moveCameraToCurrentPosition(true);
+
+    }
+
+    public boolean moveCameraToCurrentPosition(boolean zoom) {
+        LatLng GPS_LOCATION = getCurrentLocation();
+        if (GPS_LOCATION != null) {
+            if (mMap != null) {
+                if (zoom || Settings.get(getContext()).isDrivingModeEnabled()) {
+                    this.mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(GPS_LOCATION,15));
+                } else {
+                    this.mMap.animateCamera(CameraUpdateFactory.newLatLng(GPS_LOCATION));
+                }
+
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            //Try again after half a second
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    moveCameraToCurrentPosition(true);
+                }
+            }, 500);
+        }
+        return false;
     }
 }

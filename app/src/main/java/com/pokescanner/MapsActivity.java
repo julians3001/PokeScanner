@@ -170,7 +170,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @BindView(R.id.btnHeatMapMode)
     ImageButton btnHeatMapMode;
     @BindView(R.id.btnCenterCamera)
-            ImageButton btnCenterCamera;
+    ImageButton btnCenterCamera;
+    @BindView(R.id.btnOverlayActivity)
+    ImageButton btnOverlayActivity;
     boolean AutoScan = false;
 
 
@@ -492,6 +494,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
 
+    @OnClick(R.id.btnOverlayActivity)
+    public void startOverlayActivity(){
+        checkDrawOverlayPermission();
+        Intent intent = new Intent (this, OverlayMapsActivity.class);
+        startActivity(intent);
+    }
 
     @OnClick(R.id.btnSearch)
     public void PokeScan() {
@@ -1650,12 +1658,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     @OnClick(R.id.btnCenterCamera)
-    public void btnCenterCamer(){
+    public void btnCenterCamera(){
         floatingActionMenu.close(true);
-        //moveCameraToCurrentPosition(true);
-        //checkDrawOverlayPermission();
-        Intent intent = new Intent (this, OverlayMapsActivity.class);
-        startActivity(intent);
+        moveCameraToCurrentPosition(true);
+
     }
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
