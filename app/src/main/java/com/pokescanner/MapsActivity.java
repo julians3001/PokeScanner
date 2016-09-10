@@ -496,8 +496,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @OnClick(R.id.btnOverlayActivity)
     public void startOverlayActivity(){
+        floatingActionMenu.close(true);
         checkDrawOverlayPermission();
         Intent intent = new Intent (this, OverlayMapsActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
     }
 
