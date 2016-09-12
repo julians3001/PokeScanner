@@ -963,7 +963,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(realmDataBase!=null){
             realmDataBase.close();
         }
-
+        if(mConnection!=null){
+            unbindService(mConnection);
+        }
         super.onDestroy();
     }
 
@@ -1017,7 +1019,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void openRealm() {
-        File file = new File(Environment.getExternalStorageDirectory()+"/Pokescanner/Db/");
+        if(!isExternalStorageReadable()){
+            return;
+        }
+        File file = new File(myContext.getFilesDir()+"/Pokescanner/Db/");
 
         if (!file.exists()) {
             boolean result = file.mkdirs();

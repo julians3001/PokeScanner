@@ -45,7 +45,8 @@ public class AuthAccountsLoader extends Thread {
                     PtcCredentialProvider ptcCredentialProvider = new PtcCredentialProvider(client, user.getUsername(), user.getPassword());
                     sleep(300);
 
-                        go  = new PokemonGo(ptcCredentialProvider, client);
+                        go  = new PokemonGo(client);
+                        go.login(ptcCredentialProvider);
                         LatLng currentPosition = getCurrentLocation();
                         go.setLatitude(currentPosition.latitude);
                         go.setLongitude(currentPosition.longitude);

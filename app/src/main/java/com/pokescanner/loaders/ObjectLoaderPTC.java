@@ -105,7 +105,8 @@ public class ObjectLoaderPTC extends Thread {
                 }
 
                 if (provider != null) {
-                    MultiAccountLoader.cachedGo[position] = new PokemonGo(provider, client);
+                    MultiAccountLoader.cachedGo[position] = new PokemonGo(client);
+                    MultiAccountLoader.cachedGo[position].login(provider);
                 }
             }
 
@@ -245,7 +246,8 @@ public class ObjectLoaderPTC extends Thread {
         realmDataBase.close();
     }
     private void openRealm() {
-        File file = new File(Environment.getExternalStorageDirectory()+"/Pokescanner/Db/");
+        if(!isExternalStorageWritable()){return;}
+        File file = new File(context.getFilesDir()+"/Pokescanner/Db/");
 
         if (!file.exists()) {
             boolean result = file.mkdirs();
