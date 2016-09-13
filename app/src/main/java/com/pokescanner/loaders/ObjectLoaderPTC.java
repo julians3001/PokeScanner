@@ -223,7 +223,7 @@ public class ObjectLoaderPTC extends Thread {
             System.out.println("ObjectLoader: " + user.getUsername());
         }catch (AsyncPokemonGoException e) {
             e.printStackTrace();
-            MultiAccountLoader.cachedGo = new PokemonGo[40];
+            MultiAccountLoader.cachedGo[position] = null;
             System.out.println("AsyncPokemonGo: " + user.getUsername());
         }
     }

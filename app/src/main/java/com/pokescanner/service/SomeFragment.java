@@ -1,23 +1,30 @@
 package com.pokescanner.service;
 
 import android.Manifest;
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceManager;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.util.ArrayMap;
 import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -25,11 +32,14 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import com.github.clans.fab.FloatingActionMenu;
+import com.google.android.gms.ads.internal.formats.zzk;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -38,6 +48,7 @@ import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -45,12 +56,23 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.TileOverlay;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.PutDataMapRequest;
+import com.google.android.gms.wearable.PutDataRequest;
+import com.google.android.gms.wearable.Wearable;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
+import com.pokegoapi.api.PokemonGo;
 import com.pokescanner.MapsActivity;
 import com.pokescanner.OverlayMapsActivity;
 import com.pokescanner.R;
 import com.pokescanner.events.ForceRefreshEvent;
+import com.pokescanner.events.MinimizeToggleEvent;
 import com.pokescanner.events.RestartRefreshEvent;
+import com.pokescanner.events.ScanCircleEvent;
+import com.pokescanner.exceptions.NoCameraPositionException;
+import com.pokescanner.exceptions.NoMapException;
 import com.pokescanner.helper.Generation;
 import com.pokescanner.helper.GymFilter;
 import com.pokescanner.loaders.MultiAccountLoader;
@@ -82,6 +104,8 @@ import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 
+import static com.pokescanner.helper.Generation.makeHexScanMap;
+
 
 public class SomeFragment extends Fragment implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
@@ -95,8 +119,10 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     FloatingActionMenu floatingActionMenu;
     ImageButton btnAutoScan;
     ImageButton btnHeatMapMode;
+    ImageButton btnClear;
     ImageButton btnCenterCamera;
     ImageButton btnStopOverlayActivity;
+    ImageButton btnMinimize;
 
     public AlertDialog builderHeatMap;
     public ArrayList<LatLng> pokemonPosition;
@@ -121,8 +147,6 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
 
     TileOverlay mOverlay;
 
-    private GoogleApiClient mGoogleApiClient;
-    private GoogleApiClient mGoogleWearApiClient;
     List<LatLng> scanMap = new ArrayList<>();
 
     private Map<Pokemons, Marker> pokemonsMarkerMap = new HashMap<>();
@@ -145,7 +169,6 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     public HeatmapTileProvider mHeatProvider;
 
     String TAG = "wear";
-    public ServiceConnection mConnection;
 
     int pos = 1;
     //Used for determining Scan status
@@ -160,6 +183,10 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     MapView mapView;
     public static SomeFragment someFragment;
 
+    public GoogleMap getFragmentMap(){
+        return mMap;
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.overlay_activity_maps, container, false);
@@ -169,11 +196,52 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
         mapView = (MapView) v.findViewById(R.id.mapview);
         btnStopOverlayActivity = (ImageButton) v.findViewById(R.id.btnStopOverlayActivity);
         button = (FloatingActionButton) v.findViewById(R.id.btnOverlaySearch);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                PokeScan();
+            }
+        });
+        button.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+                return onLongClickSearch();
+            }
+        });
         progressBar = (ProgressBar) v.findViewById(R.id.OverlayprogressBar);
         btnStopOverlayActivity.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 stopOverlayService();
+            }
+        });
+        btnClear = (ImageButton) v.findViewById(R.id.btnOverlayClear);
+        btnClear.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                cleanPokemon();
+            }
+        });
+
+        btnAutoScan = (ImageButton) v.findViewById(R.id.btnOverlayAutoScan);
+        btnAutoScan.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                AutoScan();
+            }
+        });
+        btnAutoScan.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+                return AutoScanCamera();
+            }
+        });
+
+        btnSataliteMode = (com.github.clans.fab.FloatingActionButton) v.findViewById(R.id.btnOverlaySataliteMode);
+        btnSataliteMode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                toggleMapType();
             }
         });
         btnCenterCamera = (ImageButton) v.findViewById(R.id.btnOverlayCenterCamera);
@@ -183,12 +251,27 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                 btnCenterCamera();
             }
         });
+        btnMinimize = (ImageButton) v.findViewById(R.id.btnOverlayMinimize);
+        btnMinimize.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                minimizeOverlay();
+            }
+        });
         floatingActionMenu = (FloatingActionMenu) v.findViewById(R.id.floatOverlayActionMenu);
-        mapView.onCreate(savedInstanceState);
+        try{
+            mapView.onCreate(savedInstanceState);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
 
         // Gets to GoogleMap from the MapView and does initialization stuff
         mapView.getMapAsync(this);
-        someFragment = this;
+        try{
+            someFragment = this;
+        } catch (Exception e){
+            e.printStackTrace();
+        }
 
         RealmConfiguration realmConfiguration = new RealmConfiguration.Builder(getContext())
                 .name(Realm.DEFAULT_REALM_NAME)
@@ -202,9 +285,28 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
         return v;
     }
 
+    private void minimizeOverlay() {
+        EventBus.getDefault().post(new MinimizeToggleEvent());
+    }
+
+    public void toggleMapType() {
+        if(mMap != null) {
+            if(mMap.getMapType() == GoogleMap.MAP_TYPE_NORMAL) {
+                mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                btnSataliteMode.setImageResource(R.drawable.ic_map_white_24dp);
+            }
+            else {
+                mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                btnSataliteMode.setImageResource(R.drawable.ic_satellite_white_24dp);
+            }
+        }
+        floatingActionMenu.close(true);
+    }
+
     @Override
     public void onStart(){
         super.onStart();
+        EventBus.getDefault().register(this);
         startRefresher();
     }
 
@@ -271,6 +373,11 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
         return null;
     }
 
+    public boolean onLongClickSearch() {
+        SettingsUtil.searchRadiusDialog(getContext());
+        return true;
+    }
+
     @Override
     public void onConnected(@Nullable Bundle bundle) {
 
@@ -289,6 +396,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
 
     public void stopOverlayService(){
         floatingActionMenu.close(true);
+        SomeFragment.someFragment = null;
         Intent intent = new Intent (getContext(), OverlayService.class);
         getContext().stopService(intent);
         Intent launchIntent = getActivity().getPackageManager().getLaunchIntentForPackage("com.pokescanner");
@@ -336,13 +444,13 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             progressBar.setVisibility(View.VISIBLE);
             button.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.ic_pause_white_24dp));
-            SCANNING_STATUS = true;
+            MultiAccountLoader.SCANNING_STATUS = true;
         } else {
             removeCircleArray();
             getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             progressBar.setVisibility(View.INVISIBLE);
             button.setImageDrawable(ContextCompat.getDrawable(getActivity(), R.drawable.ic_track_changes_white_24dp));
-            SCANNING_STATUS = false;
+            MultiAccountLoader.SCANNING_STATUS = false;
         }
     }
 
@@ -358,6 +466,39 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     public void forceRefreshEvent(ForceRefreshEvent event) {
         refreshGymsAndPokestops();
         refreshMap();
+    }
+
+    public int adjustAlpha(int color, float factor) {
+        int alpha = Math.round(Color.alpha(color) * factor);
+        int red = Color.red(color);
+        int green = Color.green(color);
+        int blue = Color.blue(color);
+        return Color.argb(alpha, red, green, blue);
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void createCircle(ScanCircleEvent event) {
+        if (event.pos != null)
+        {
+            CircleOptions circleOptions = new CircleOptions()
+                    .radius(80)
+                    .strokeWidth(0)
+                    .fillColor(adjustAlpha(event.color,0.5f))
+                    .center(event.pos);
+            circleArray.add(mMap.addCircle(circleOptions));
+            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+            int iprogressBar = mPrefs.getInt("progressbar",1);
+
+            float progress = (float) iprogressBar * 100 / scanMap.size();
+            progressBar.setProgress((int) progress);
+            if((int) progress == 100) {
+                showProgressbar(false);
+            }
+            if((int) progress>=100){
+                removeCircleArray();
+            }
+
+        }
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -464,6 +605,113 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
         }
     }
 
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    public boolean AutoScanCamera() {
+
+
+
+        if(MultiAccountLoader.autoScan){
+            MultiAccountLoader.autoScan = false;
+        } else {
+            MultiAccountLoader.autoScan = true;
+        }
+        if(MultiAccountLoader.autoScan) {
+            btnAutoScan.setBackground(getActivity().getDrawable(R.drawable.circle_button_green));
+            int SERVER_REFRESH_RATE = Settings.get(getActivity()).getServerRefresh();
+            int scanValue = Settings.get(getActivity()).getScanValue();
+
+            LatLng scanPosition = null;
+
+            try {
+                scanPosition = getCameraLocation();
+            } catch (NoMapException | NoCameraPositionException e) {
+                showToast(R.string.SCAN_FAILED);
+                e.printStackTrace();
+            }
+
+            progressBar.setProgress(0);
+            showProgressbar(true);
+
+
+            if (scanPosition != null) {
+                scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
+                if (scanMap != null) {
+                    //Pull our users from the realm
+                    ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
+
+                    MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
+                    //Set our map
+                    MultiAccountLoader.setScanMap(scanMap);
+                    MultiAccountLoader.cachedGo = new PokemonGo[40];
+                    //Set our users
+                    MultiAccountLoader.setUsers(users);
+                    //Set GoogleWearAPI
+                    //MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
+                    //Set Context
+                    MultiAccountLoader.setContext(getActivity());
+                    //Begin our threads???
+
+
+                } else {
+                    showToast(R.string.SCAN_FAILED);
+                    showProgressbar(false);
+                }
+            } else {
+                showToast(R.string.SCAN_FAILED);
+                showProgressbar(false);
+            }
+
+
+            Intent intentService = new Intent(getActivity(), AutoScanService.class);
+            getActivity().bindService(intentService,MultiAccountLoader.mConnection,Context.BIND_AUTO_CREATE);
+            //StartStopSendToWear(true, scanMap.size());
+        } else {
+            btnAutoScan.setBackground(getActivity().getDrawable(R.drawable.circle_button));
+            Intent intentService = new Intent(getActivity(), AutoScanService.class);
+            getActivity().unbindService(MultiAccountLoader.mConnection);
+            MultiAccountLoader.cancelAllThreads();
+            //StartStopSendToWear(false, 1);
+        }
+
+        return true;
+    }
+
+
+    public void cleanPokemon(){
+        if (mMap != null) {
+            realm.executeTransaction(new Realm.Transaction() {
+                @Override
+                public void execute(Realm realm) {
+                    realm.where(Pokemons.class).findAll().deleteAllFromRealm();
+
+                    pokemonsMarkerMap = new ArrayMap<Pokemons, Marker>();
+
+                    mMap.clear();
+                    // showToast(R.string.cleared_map);
+                }
+            });
+
+            forceRefreshEvent(new ForceRefreshEvent());
+            clearPokemonListOnWear();
+        }
+    }
+
+    private void clearPokemonListOnWear(){
+        //ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+        ArrayList<Pokemons> listout = new ArrayList<>();
+
+
+
+        Gson gson = new Gson();
+        String json = gson.toJson(listout,new TypeToken<ArrayList<Pokemons>>() {}.getType());
+        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/pokemonlist");
+        putDataMapReq.getDataMap().putString("pokemons", json);
+        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
+        PendingResult<DataApi.DataItemResult> pendingResult =
+                Wearable.DataApi.putDataItem(MultiAccountLoader.mGoogleApiClient, putDataReq);
+    }
+
     public void refreshGymsAndPokestops() {
         if (!LIST_MODE) {
             //The the map bounds
@@ -543,7 +791,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     }
 
     public void createBoundingBox() {
-        if (SCANNING_STATUS) {
+        if (MultiAccountLoader.SCANNING_STATUS) {
             if (scanMap.size() > 0) {
                 removeBoundingBox();
 
@@ -574,4 +822,175 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             circleArray.clear();
         }
     }
+
+    private void stopPokeScan() {
+        MultiAccountLoader.cancelAllThreads();
+        if (!MultiAccountLoader.areThreadsRunning()) {
+            showProgressbar(false);
+        }
+    }
+
+    public LatLng getCameraLocation() throws NoMapException, NoCameraPositionException {
+        if (mMap != null) {
+            if (mMap.getCameraPosition() != null) {
+                return mMap.getCameraPosition().target;
+            }
+            throw new NoCameraPositionException();
+        }
+        throw new NoMapException();
+    }
+
+    public void showToast(int resString) {
+        Toast.makeText(getActivity(), getString(resString), Toast.LENGTH_SHORT).show();
+    }
+
+    public void showToast(String resString) {
+        Toast.makeText(getActivity(), resString, Toast.LENGTH_SHORT).show();
+    }
+
+    public void PokeScan() {
+        if (MultiAccountLoader.SCANNING_STATUS) {
+            stopPokeScan();
+            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+            SharedPreferences.Editor prefsEditor = mPrefs.edit();
+            prefsEditor.putInt("progressbar",1);
+            prefsEditor.commit();
+            scanCurrentPosition = false;
+            //StartStopSendToWear(false, 1);
+        } else {
+            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+            SharedPreferences.Editor prefsEditor = mPrefs.edit();
+            prefsEditor.putInt("progressbar",1);
+            prefsEditor.commit();
+            //Progress Bar Related Stuff
+            pos = 1;
+            int SERVER_REFRESH_RATE = Settings.get(getContext()).getServerRefresh();
+
+            System.out.println(SERVER_REFRESH_RATE);
+
+            progressBar.setProgress(0);
+            int scanValue = Settings.get(getContext()).getScanValue();
+            showProgressbar(true);
+            //get our camera position
+            LatLng scanPosition = null;
+
+            //Try to get the camera position
+            try {
+                scanPosition = getCameraLocation();
+            } catch (NoMapException | NoCameraPositionException e) {
+                showToast(R.string.SCAN_FAILED);
+                e.printStackTrace();
+            }
+
+            if (SettingsUtil.getSettings(getActivity()).isDrivingModeEnabled() && moveCameraToCurrentPosition(false)) {
+                scanPosition = getCurrentLocation();
+            }
+
+            if(scanCurrentPosition){
+                scanPosition = getCurrentLocation();
+                scanCurrentPosition = false;
+            }
+
+
+            if (scanPosition != null) {
+                scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
+                if (scanMap != null) {
+                    //Pull our users from the realm
+                    ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
+
+                    MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
+                    //Set our map
+                    MultiAccountLoader.setScanMap(scanMap);
+                    //Set our users
+                    MultiAccountLoader.setUsers(users);
+                    //Set GoogleWearAPI
+                    //MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
+                    MultiAccountLoader.cachedGo = new PokemonGo[40];
+                    //Set Context
+                    MultiAccountLoader.setContext(getContext());
+                    //Begin our threads???
+                    MultiAccountLoader.startThreads();
+                    //StartStopSendToWear(true, scanMap.size());
+                } else {
+                    showToast(R.string.SCAN_FAILED);
+                    showProgressbar(false);
+                }
+            } else {
+                showToast(R.string.SCAN_FAILED);
+                showProgressbar(false);
+            }
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    public void AutoScan() {
+
+        if(MultiAccountLoader.autoScan){
+            MultiAccountLoader.autoScan = false;
+        } else {
+            MultiAccountLoader.autoScan = true;
+        }
+        if(MultiAccountLoader.autoScan) {
+            btnAutoScan.setBackground(getActivity().getDrawable(R.drawable.circle_button_blue));
+            int SERVER_REFRESH_RATE = Settings.get(getActivity()).getServerRefresh();
+            int scanValue = Settings.get(getActivity()).getScanValue();
+
+            LatLng scanPosition = null;
+
+            scanPosition = getCurrentLocation();
+
+            progressBar.setProgress(0);
+            showProgressbar(true);
+
+            if (scanPosition != null) {
+                scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
+                if (scanMap != null) {
+                    //Pull our users from the realm
+                    ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
+
+                    MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
+                    //Set our map
+                    MultiAccountLoader.setScanMap(scanMap);
+                    MultiAccountLoader.cachedGo = new PokemonGo[40];
+                    //Set our users
+                    MultiAccountLoader.setUsers(users);
+                    //Set GoogleWearAPI
+                    //Set Context
+                    MultiAccountLoader.setContext(getActivity());
+                    //Begin our threads???
+
+
+                } else {
+                    showToast(R.string.SCAN_FAILED);
+                    showProgressbar(false);
+                }
+            } else {
+                showToast(R.string.SCAN_FAILED);
+                showProgressbar(false);
+            }
+
+            Intent intentService = new Intent(getActivity(), AutoScanService.class);
+            intentService.putExtra("mode",0);
+            //startService(intentService);
+            try{
+                getActivity().bindService(intentService,MultiAccountLoader.mConnection,Context.BIND_AUTO_CREATE);
+            } catch(Exception e){
+                e.printStackTrace();
+            }
+            //StartStopSendToWear(true, scanMap.size());
+        } else {
+            btnAutoScan.setBackground(getActivity().getDrawable(R.drawable.circle_button));
+            Intent intentService = new Intent(getActivity(), AutoScanService.class);
+            try{
+                getActivity().unbindService(MultiAccountLoader.mConnection);
+                // stopService(intentService);
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+            MultiAccountLoader.cancelAllThreads();
+            //StartStopSendToWear(false, 1);
+        }
+    }
+
+
 }

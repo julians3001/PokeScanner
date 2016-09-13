@@ -41,33 +41,9 @@
         android:layout_alignParentEnd="true"
         android:layout_margin="16dp">
 
-        <com.github.clans.fab.FloatingActionButton
-            android:id="@+id/btnOverlayAddressSearch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_search_white_36dp"
-            fab:fab_size="mini"
-            fab:fab_colorNormal="@color/colorPrimary"
-            fab:fab_colorPressed="@color/colorAccent"
-            fab:fab_colorRipple="@color/colorPrimaryDark" />
-        <com.github.clans.fab.FloatingActionButton
-            android:id="@+id/btnOverlayHeatMapMode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/bullseye"
-            fab:fab_size="mini"
-            fab:fab_colorNormal="@color/colorPrimary"
-            fab:fab_colorPressed="@color/colorAccent"
-            fab:fab_colorRipple="@color/colorPrimaryDark" />
-        <com.github.clans.fab.FloatingActionButton
-            android:id="@+id/btnOverlayListMode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_view_list_white_24dp"
-            fab:fab_size="mini"
-            fab:fab_colorNormal="@color/colorPrimary"
-            fab:fab_colorPressed="@color/colorAccent"
-            fab:fab_colorRipple="@color/colorPrimaryDark" />
+
+
+
         <com.github.clans.fab.FloatingActionButton
             android:id="@+id/btnOverlaySataliteMode"
             android:layout_width="wrap_content"
@@ -131,9 +107,9 @@
         <ImageButton
             android:layout_width="35dp"
             android:layout_height="35dp"
-            android:id="@+id/btnOverlaySettings"
+            android:id="@+id/btnOverlayMinimize"
             android:background="@drawable/circle_button"
-            android:src="@drawable/ic_settings_white_24dp"
+            android:src="@drawable/arrow_compress"
             android:layout_toEndOf="@+id/btnOverlaySearch"
             android:padding="2dp"
             android:layout_centerVertical="true"
@@ -162,6 +138,7 @@
             android:layout_centerVertical="true"
             android:layout_toStartOf="@+id/btnOverlaySearch"
             android:layout_marginRight="60dp" />
+
 
     </RelativeLayout>
 

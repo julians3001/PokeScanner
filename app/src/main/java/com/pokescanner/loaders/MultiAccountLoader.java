@@ -1,6 +1,7 @@
 package com.pokescanner.loaders;
 
 import android.content.Context;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
@@ -26,6 +27,8 @@ public class MultiAccountLoader {
     static public Context context;
     static public boolean autoScan = false;
     static public PokemonGo[] cachedGo = new PokemonGo[40];
+    static public boolean SCANNING_STATUS = false;
+    static public ServiceConnection mConnection;
 
     static public void startThreads() {
         scanMaps = new ArrayList<>();

@@ -100,6 +100,7 @@ import com.pokescanner.objects.Pokemons;
 import com.pokescanner.objects.User;
 import com.pokescanner.service.AutoScanService;
 import com.pokescanner.service.OverlayService;
+import com.pokescanner.service.SomeFragment;
 import com.pokescanner.settings.Settings;
 import com.pokescanner.settings.SettingsActivity;
 import com.pokescanner.utils.DrawableUtils;
@@ -223,11 +224,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public HeatmapTileProvider mHeatProvider;
 
     String TAG = "wear";
-    public ServiceConnection mConnection;
+
 
     int pos = 1;
     //Used for determining Scan status
-    boolean SCANNING_STATUS = false;
+
     boolean LIST_MODE = false;
     //Used for our refreshing of the map
     Subscription pokeonRefresher;
@@ -238,7 +239,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onCreate(Bundle savedInstanceState) {
 
 
-        mConnection = new ServiceConnection() {
+        MultiAccountLoader.mConnection = new ServiceConnection() {
 
             @Override
             public void onServiceConnected(ComponentName className,
@@ -322,6 +323,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     .build();
         }
 
+        if(getIntent()!=null){
+            if(getIntent().getStringExtra("methodName")!=null){
+                onNewIntent(getIntent());
+            }
+        }
 
     }
 
@@ -404,13 +410,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             Intent intentService = new Intent(this, AutoScanService.class);
             intentService.putExtra("mode",0);
             //startService(intentService);
-            bindService(intentService,mConnection,Context.BIND_AUTO_CREATE);
+            bindService(intentService,MultiAccountLoader.mConnection,Context.BIND_AUTO_CREATE);
             StartStopSendToWear(true, scanMap.size());
         } else {
             btnAutoScan.setBackground(getDrawable(R.drawable.circle_button));
             Intent intentService = new Intent(this, AutoScanService.class);
             try{
-                unbindService(mConnection);
+                unbindService(MultiAccountLoader.mConnection);
                // stopService(intentService);
             } catch (Exception e){
                 e.printStackTrace();
@@ -479,12 +485,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
             Intent intentService = new Intent(this, AutoScanService.class);
-            bindService(intentService,mConnection,Context.BIND_AUTO_CREATE);
+            bindService(intentService,MultiAccountLoader.mConnection,Context.BIND_AUTO_CREATE);
             StartStopSendToWear(true, scanMap.size());
         } else {
             btnAutoScan.setBackground(getDrawable(R.drawable.circle_button));
             Intent intentService = new Intent(this, AutoScanService.class);
-            unbindService(mConnection);
+            unbindService(MultiAccountLoader.mConnection);
             MultiAccountLoader.cancelAllThreads();
             StartStopSendToWear(false, 1);
         }
@@ -497,15 +503,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @OnClick(R.id.btnOverlayActivity)
     public void startOverlayActivity(){
         floatingActionMenu.close(true);
-        checkDrawOverlayPermission();
+        if(!checkDrawOverlayPermission()){
+            return;
+        }
         Intent intent = new Intent (this, OverlayMapsActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        //intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(intent);
     }
 
     @OnClick(R.id.btnSearch)
     public void PokeScan() {
-        if (SCANNING_STATUS) {
+        if (MultiAccountLoader.SCANNING_STATUS) {
             stopPokeScan();
             SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
             SharedPreferences.Editor prefsEditor = mPrefs.edit();
@@ -612,13 +620,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             progressBar.setVisibility(View.VISIBLE);
             button.setImageDrawable(ContextCompat.getDrawable(MapsActivity.this, R.drawable.ic_pause_white_24dp));
-            SCANNING_STATUS = true;
+            MultiAccountLoader.SCANNING_STATUS = true;
         } else {
             removeCircleArray();
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             progressBar.setVisibility(View.INVISIBLE);
             button.setImageDrawable(ContextCompat.getDrawable(MapsActivity.this, R.drawable.ic_track_changes_white_24dp));
-            SCANNING_STATUS = false;
+            MultiAccountLoader.SCANNING_STATUS = false;
         }
     }
 
@@ -758,7 +766,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void createBoundingBox() {
-        if (SCANNING_STATUS) {
+        if (MultiAccountLoader.SCANNING_STATUS) {
             if (scanMap.size() > 0) {
                 removeBoundingBox();
 
@@ -963,8 +971,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if(realmDataBase!=null){
             realmDataBase.close();
         }
-        if(mConnection!=null){
-            unbindService(mConnection);
+        if(MultiAccountLoader.mConnection!=null){
+            try{
+                unbindService(MultiAccountLoader.mConnection);
+            } catch(Exception e){
+                e.printStackTrace();
+            }
         }
         super.onDestroy();
     }
@@ -1637,10 +1649,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         return false;
     }
 
-    public void moveCameraToLocation(LatLng location){
+    public void moveCameraToLocation(LatLng location, GoogleMap mMap){
         if (mMap != null) {
 
-            this.mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 16));
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location, 16));
 
         }
     }
@@ -1683,7 +1695,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public final static int REQUEST_CODE = 12345;
 
     @TargetApi(Build.VERSION_CODES.M)
-    public void checkDrawOverlayPermission() {
+    public boolean checkDrawOverlayPermission() {
         /** check if we already  have permission to draw over other apps */
         if (!android.provider.Settings.canDrawOverlays(this)) {
             /** if not construct intent to request permission */
@@ -1691,7 +1703,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     Uri.parse("package:" + getPackageName()));
             /** request permission via start activity for result */
             startActivityForResult(intent, REQUEST_CODE);
+            return false;
         }
+
+        return true;
     }
 
     @TargetApi(Build.VERSION_CODES.M)
@@ -1822,13 +1837,25 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onNewIntent(intent);
         if(intent.getStringExtra("methodName")==null)
             return;
+
+
         if(intent.getStringExtra("methodName").equals("newPokemon"))
         {
             Gson gson = new Gson();
             Pokemons newPokemon = gson.fromJson(intent.getStringExtra("pokemon"), new TypeToken<Pokemons>() {
             }.getType());
             LatLng location = new LatLng(newPokemon.getLatitude(), newPokemon.getLongitude());
-            moveCameraToLocation(location);
+
+            if(SomeFragment.someFragment!= null){
+                GoogleMap gMap= SomeFragment.someFragment.getFragmentMap();
+                moveCameraToLocation(location,gMap);
+                Intent startMain = new Intent(Intent.ACTION_MAIN);
+                startMain.addCategory(Intent.CATEGORY_HOME);
+                startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(startMain);
+                return;
+            }
+            moveCameraToLocation(location, mMap);
         }
     }
 }
