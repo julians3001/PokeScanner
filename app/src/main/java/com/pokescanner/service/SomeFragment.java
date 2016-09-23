@@ -8,6 +8,7 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
@@ -23,15 +24,18 @@ import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.util.ArrayMap;
 import android.support.v7.app.AlertDialog;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.clans.fab.FloatingActionMenu;
@@ -81,6 +85,8 @@ import com.pokescanner.objects.PokeStop;
 import com.pokescanner.objects.Pokemons;
 import com.pokescanner.objects.User;
 import com.pokescanner.settings.Settings;
+import com.pokescanner.utils.DrawableUtils;
+import com.pokescanner.utils.MarkerDetails;
 import com.pokescanner.utils.PermissionUtils;
 import com.pokescanner.utils.SettingsUtil;
 import com.pokescanner.utils.UiUtils;
@@ -350,12 +356,60 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
         }
         mMap.setMyLocationEnabled(true);
 
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                Object markerKey = null;
+                for (Map.Entry<Pokemons, Marker> pokemonsMarkerEntry : pokemonsMarkerMap.entrySet()) {
+                    if (pokemonsMarkerEntry.getValue().equals(marker)) {
+                        markerKey = pokemonsMarkerEntry.getKey();
+                        break;
+                    }
+                }
+                if (markerKey == null) {
+                    for (Map.Entry<Gym, Marker> gymMarkerEntry : gymMarkerMap.entrySet()) {
+                        if (gymMarkerEntry.getValue().equals(marker)) {
+                            markerKey = gymMarkerEntry.getKey();
+                            break;
+                        }
+                    }
+                }
+                if (markerKey == null) {
+                    for (Map.Entry<PokeStop, Marker> pokeStopMarkerEntry : pokestopMarkerMap.entrySet()) {
+                        if (pokeStopMarkerEntry.getValue().equals(marker)) {
+                            markerKey = pokeStopMarkerEntry.getKey();
+                            break;
+                        }
+                    }
+                }
+                if(markerKey == null){
+                    markerKey = marker;
+                }
+
+                if (markerKey != null) {
+                    if (!Settings.get(getActivity()).isUseOldMapMarker()) {
+                        removeAdapterAndListener();
+                        MarkerDetails.showMarkerDetailsDialog(getActivity(), markerKey);
+                    } else {
+                        setAdapterAndListener(markerKey);
+                        marker.showInfoWindow();
+                    }
+                }
+                return false;
+            }
+        });
+
         // Needs to call MapsInitializer before doing any CameraUpdateFactory calls
         MapsInitializer.initialize(this.getActivity());
 
         // Updates the location and zoom of the MapView
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(getCurrentLocation(),15);
         mMap.animateCamera(cameraUpdate);
+    }
+
+    private void removeAdapterAndListener() {
+        mMap.setInfoWindowAdapter(null);
+        mMap.setOnInfoWindowClickListener(null);
     }
 
     @SuppressWarnings({"MissingPermission"})
@@ -987,10 +1041,55 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             } catch (Exception e){
                 e.printStackTrace();
             }
+
             MultiAccountLoader.cancelAllThreads();
             //StartStopSendToWear(false, 1);
         }
     }
 
+    private void setAdapterAndListener(final Object markerKey) {
+        mMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {
+            @Override
+            public View getInfoWindow(Marker arg0) {
+                return null;
+            }
 
+            @Override
+            public View getInfoContents(final Marker marker) {
+                LinearLayout info = new LinearLayout(getActivity());
+                info.setOrientation(LinearLayout.VERTICAL);
+
+                TextView title = new TextView(getActivity());
+                title.setTextColor(Color.BLACK);
+                title.setGravity(Gravity.CENTER);
+                title.setTypeface(null, Typeface.BOLD);
+                title.setText(marker.getTitle());
+
+                TextView snippet = new TextView(getActivity());
+                snippet.setTextColor(Color.GRAY);
+                snippet.setGravity(Gravity.CENTER);
+                if (markerKey instanceof Pokemons) {
+                    Pokemons pokemons = ((Pokemons) markerKey);
+                    snippet.setText(getActivity().getText(R.string.expires_in) + " " + DrawableUtils.getExpireTime(pokemons.getExpires()) + "\n" + "Attack: " + pokemons.getIndividualAttack() + "\n" + "Defense: " + pokemons.getIndividualDefense() + "\n" + "Stamina: " + pokemons.getIndividualStamina());
+                } else {
+                    snippet.setText(marker.getSnippet());
+                    info.addView(title);
+                    info.addView(snippet);
+                    return info;
+                }
+
+                TextView navigate = new TextView(getActivity());
+                navigate.setTextColor(Color.GRAY);
+                navigate.setGravity(Gravity.CENTER);
+                navigate.setText(getText(R.string.click_open_in_gmaps));
+
+                info.addView(title);
+                info.addView(snippet);
+                info.addView(navigate);
+
+                return info;
+            }
+        });
+
+    }
 }

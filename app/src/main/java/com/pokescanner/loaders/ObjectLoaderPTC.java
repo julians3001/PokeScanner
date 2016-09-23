@@ -1,5 +1,6 @@
 package com.pokescanner.loaders;
 
+import android.app.ActivityManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -27,6 +28,9 @@ import com.pokegoapi.api.PokemonGo;
 import com.pokegoapi.api.map.Map;
 import com.pokegoapi.api.map.MapObjects;
 import com.pokegoapi.api.map.fort.Pokestop;
+import com.pokegoapi.api.map.pokemon.CatchablePokemon;
+import com.pokegoapi.api.map.pokemon.encounter.EncounterResult;
+import com.pokegoapi.api.pokemon.Pokemon;
 import com.pokegoapi.auth.CredentialProvider;
 import com.pokegoapi.auth.GoogleUserCredentialProvider;
 import com.pokegoapi.auth.PtcCredentialProvider;
@@ -73,6 +77,7 @@ public class ObjectLoaderPTC extends Thread {
     int progressBar;
     ArrayList<Pokemons> listout;
     Realm realmDataBase;
+    PokemonGo go;
 
     public ObjectLoaderPTC(User user, List<LatLng> scanMap, int SLEEP_TIME, int pos, GoogleApiClient mGoogleWearApiClient, Context context) {
         this.user = user;
@@ -110,7 +115,7 @@ public class ObjectLoaderPTC extends Thread {
                 }
             }
 
-            PokemonGo go = MultiAccountLoader.cachedGo[position];
+            go = MultiAccountLoader.cachedGo[position];
             if(go == null){
                 return;
             }
@@ -123,12 +128,11 @@ public class ObjectLoaderPTC extends Thread {
                     for (LatLng pos : scanMap) {
                             go.setLatitude(pos.latitude);
                             go.setLongitude(pos.longitude);
-                            Map map = go.getMap();
-                            MapObjects event = map.getMapObjects();
-                            final Collection<MapPokemonOuterClass.MapPokemon> collectionPokemon = event.getCatchablePokemons();
+                        Map map = go.getMap();
+                        final Collection<CatchablePokemon> catchablePokemon = map.getCatchablePokemon();
 
-                            final Collection<FortDataOuterClass.FortData> collectionGyms = event.getGyms();
-                            final Collection<Pokestop> collectionPokeStops = event.getPokestops();
+                            final List<com.pokegoapi.api.gym.Gym> collectionGyms = map.getGyms();
+                            final Collection<Pokestop> collectionPokeStops = map.getMapObjects().getPokestops();
 
                             EventBus.getDefault().post(new ScanCircleEvent(pos,user.getAccountColor()));
 
@@ -136,8 +140,23 @@ public class ObjectLoaderPTC extends Thread {
                             realm.executeTransaction(new Realm.Transaction() {
                                 @Override
                                 public void execute(Realm realm) {
-                                    for (MapPokemonOuterClass.MapPokemon pokemonOut : collectionPokemon){
+                                    for (CatchablePokemon pokemonOut : catchablePokemon){
+                                        EncounterResult encResult = null;
+                                        try {
+                                            encResult = pokemonOut.encounterPokemon();
+                                        } catch (LoginFailedException e) {
+                                            e.printStackTrace();
+                                        } catch (RemoteServerException e) {
+                                            e.printStackTrace();
+                                        }
+                                        Pokemon pokemonEncounter = new Pokemon(go,encResult.getPokemonData());
+
+
                                         Pokemons pokemon = new Pokemons(pokemonOut);
+                                        pokemon.setIvInPercentage(pokemonEncounter.getIvInPercentage());
+                                        pokemon.setIndividualAttack(pokemonEncounter.getIndividualAttack());
+                                        pokemon.setIndividualDefense(pokemonEncounter.getIndividualDefense());
+                                        pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
                                         ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
                                         boolean alreadyNotificated = false;
                                         if(pokemon.getExpires()<0){
@@ -162,6 +181,7 @@ public class ObjectLoaderPTC extends Thread {
                                         }
                                         realm.copyToRealmOrUpdate(pokemon);
                                         if(UiUtils.isPokemonNotification(pokemon)&&!pokelist.contains(pokemon)&&!alreadyNotificated){
+
 
                                             Intent launchIntent = new Intent(context, MapsActivity.class);
                                             launchIntent.setAction(Long.toString(System.currentTimeMillis()));
@@ -190,7 +210,7 @@ public class ObjectLoaderPTC extends Thread {
                                         }
                                     }
 
-                                    for (FortDataOuterClass.FortData gymOut : collectionGyms)
+                                    for (com.pokegoapi.api.gym.Gym gymOut : collectionGyms)
                                         realm.copyToRealmOrUpdate(new Gym(gymOut));
 
                                     for (Pokestop pokestopOut : collectionPokeStops)

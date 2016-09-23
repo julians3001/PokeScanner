@@ -8,6 +8,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.pokegoapi.api.map.pokemon.CatchablePokemon;
 import com.pokescanner.R;
 import com.pokescanner.settings.Settings;
 import com.pokescanner.utils.DrawableUtils;
@@ -40,6 +41,10 @@ public class Pokemons  extends RealmObject{
     double longitude,latitude;
     double distance;
     long foundTime;
+    double ivInPercentage;
+    int individualAttack;
+    int individualDefense;
+    int individualStamina;
 
     public Pokemons() {}
 
@@ -50,6 +55,17 @@ public class Pokemons  extends RealmObject{
             setNumber(pokemonIn.getPokemonId().getNumber());
             setLatitude(pokemonIn.getLatitude());
             setLongitude(pokemonIn.getLongitude());
+
+
+    }
+
+    public Pokemons(CatchablePokemon pokemonIn){
+        setEncounterid(pokemonIn.getEncounterId());
+        setName(pokemonIn.getPokemonId().toString());
+        setExpires(pokemonIn.getExpirationTimestampMs());
+        setNumber(pokemonIn.getPokemonId().getNumber());
+        setLatitude(pokemonIn.getLatitude());
+        setLongitude(pokemonIn.getLongitude());
 
 
     }
@@ -80,9 +96,9 @@ public class Pokemons  extends RealmObject{
                 .draggable(true)
                 .position(position);
         if(Settings.get(context).isUseOldMapMarker()){
-            pokeIcon.title(getFormalName(context));
+            pokeIcon.title(getFormalName(context) +" (" + getIvInPercentage()+"%)");
             pokeIcon.draggable(true);
-            pokeIcon.snippet(context.getText(R.string.expires_in) + timeOut);
+            pokeIcon.snippet(context.getText(R.string.expires_in)+" " + timeOut+"\n"+"Attack: "+getIndividualAttack()+"\n"+"Defense: "+getIndividualDefense()+"\n"+"Stamina: "+getIndividualStamina());
         }
         return pokeIcon;
     }

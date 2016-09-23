@@ -8,6 +8,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -1769,7 +1770,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 snippet.setTextColor(Color.GRAY);
                 snippet.setGravity(Gravity.CENTER);
                 if (markerKey instanceof Pokemons) {
-                    snippet.setText(MapsActivity.this.getText(R.string.expires_in) + DrawableUtils.getExpireTime(((Pokemons) markerKey).getExpires()));
+                    Pokemons pokemons = ((Pokemons) markerKey);
+                    snippet.setText(MapsActivity.this.getText(R.string.expires_in) + " " + DrawableUtils.getExpireTime(pokemons.getExpires())+"\n"+"Attack: "+pokemons.getIndividualAttack()+"\n"+"Defense: "+pokemons.getIndividualDefense()+"\n"+"Stamina: "+pokemons.getIndividualStamina());
                 } else {
                     snippet.setText(marker.getSnippet());
                     info.addView(title);
@@ -1832,6 +1834,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);
     }
 
+    public static boolean openApp(Context context, String packageName) {
+        PackageManager manager = context.getPackageManager();
+        try {
+            Intent i = manager.getLaunchIntentForPackage(packageName);
+            if (i == null) {
+                return false;
+                //throw new PackageManager.NameNotFoundException();
+            }
+            i.addCategory(Intent.CATEGORY_LAUNCHER);
+            context.startActivity(i);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -1849,10 +1867,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if(SomeFragment.someFragment!= null){
                 GoogleMap gMap= SomeFragment.someFragment.getFragmentMap();
                 moveCameraToLocation(location,gMap);
-                Intent startMain = new Intent(Intent.ACTION_MAIN);
+
+                /*Intent startMain = new Intent(Intent.ACTION_MAIN);
                 startMain.addCategory(Intent.CATEGORY_HOME);
                 startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(startMain);
+                startActivity(startMain);*/
+                openApp(this,"com.nianticlabs.pokemongo");
                 return;
             }
             moveCameraToLocation(location, mMap);

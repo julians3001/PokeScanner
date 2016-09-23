@@ -51,6 +51,19 @@ public class Gym extends RealmObject
         setGuardPokemonCp(gymData.getGuardPokemonCp());
     }
 
+    public Gym(com.pokegoapi.api.gym.Gym gymData)
+    {
+        setOwnedByTeamValue(gymData.getOwnedByTeam().getNumber());
+        setLatitude(gymData.getLatitude());
+        setLongitude(gymData.getLongitude());
+        setGuardPokemonNo(gymData.getGuardPokemonId().getNumber());
+        setGuardPokemonName(gymData.getGuardPokemonId().toString());
+        setId(gymData.getId());
+        setPoints(gymData.getPoints());
+        setInBattle(gymData.getIsInBattle());
+        setGuardPokemonCp(gymData.getGuardPokemonCp());
+    }
+
     public MarkerOptions getMarker(Context context) {
         LatLng position = new LatLng(getLatitude(), getLongitude());
 

@@ -96,17 +96,23 @@ public class MultiAccountLoader {
     }
 
     static public void cancelAllThreads() {
-        while (threads != null) {
-            for (Thread thread: threads) {
-                try {
-                    thread.interrupt();
-                    thread.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }finally {
-                    threads = null;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (threads != null) {
+                    for (Thread thread: threads) {
+                        try {
+                            thread.interrupt();
+                            thread.join();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }finally {
+                            threads = null;
+                        }
+                    }
                 }
             }
-        }
+        }).start();
+
     }
 }
