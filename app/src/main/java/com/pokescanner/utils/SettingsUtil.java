@@ -116,7 +116,7 @@ public class SettingsUtil {
             sharedPrefs.getBoolean(SHOW_POKESTOPS, true),
             sharedPrefs.getBoolean(KEY_OLD_MARKER, false),
             sharedPrefs.getBoolean(SHUFFLE_ICONS, true),
-            sharedPrefs.getBoolean(SHOW_LURED_POKEMON, true)
+            sharedPrefs.getBoolean(SHOW_LURED_POKEMON, false)
         );
     }
 

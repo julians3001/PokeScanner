@@ -313,6 +313,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     public void onStart(){
         super.onStart();
         EventBus.getDefault().register(this);
+
         startRefresher();
     }
 
@@ -355,6 +356,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             return;
         }
         mMap.setMyLocationEnabled(true);
+
 
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
@@ -405,6 +407,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
         // Updates the location and zoom of the MapView
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(getCurrentLocation(),15);
         mMap.animateCamera(cameraUpdate);
+        refreshGymsAndPokestops();
     }
 
     private void removeAdapterAndListener() {
@@ -579,7 +582,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     }
                 });
 
-        gymstopRefresher = Observable.interval(30, TimeUnit.SECONDS, AndroidSchedulers.mainThread())
+        gymstopRefresher = Observable.interval(5, TimeUnit.SECONDS, AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Long>() {
                     @Override
                     public void call(Long aLong) {
@@ -1046,6 +1049,8 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             //StartStopSendToWear(false, 1);
         }
     }
+
+
 
     private void setAdapterAndListener(final Object markerKey) {
         mMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {

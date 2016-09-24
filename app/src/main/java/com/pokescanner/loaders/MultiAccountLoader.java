@@ -96,9 +96,7 @@ public class MultiAccountLoader {
     }
 
     static public void cancelAllThreads() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
+
                 while (threads != null) {
                     for (Thread thread: threads) {
                         try {
@@ -111,8 +109,7 @@ public class MultiAccountLoader {
                         }
                     }
                 }
-            }
-        }).start();
+
 
     }
 }

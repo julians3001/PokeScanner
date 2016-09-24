@@ -7,6 +7,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.pokegoapi.api.map.fort.Pokestop;
+import com.pokegoapi.exceptions.LoginFailedException;
+import com.pokegoapi.exceptions.RemoteServerException;
 import com.pokescanner.settings.Settings;
 import com.pokescanner.utils.DrawableUtils;
 import com.pokescanner.utils.SettingsUtil;
@@ -42,15 +44,17 @@ public class PokeStop extends RealmObject
     {
     }
 
-    public PokeStop(Pokestop pokestopData)
-    {
+    public PokeStop(Pokestop pokestopData){
         setLatitude(pokestopData.getLatitude());
         setLongitude(pokestopData.getLongitude());
         setId(pokestopData.getId());
-        setHasLureInfo(pokestopData.getFortData().hasLureInfo());
-        setLureExpiryTimestamp(pokestopData.getFortData().getLureInfo().getLureExpiresTimestampMs());
-        setActivePokemonNo(pokestopData.getFortData().getLureInfo().getActivePokemonId().getNumber());
-        setActivePokemonName(pokestopData.getFortData().getLureInfo().getActivePokemonId().toString());
+        setHasLureInfo(pokestopData.hasLure());
+        if(hasLureInfo){
+            setLureExpiryTimestamp(pokestopData.getFortData().getLureInfo().getEncounterId());
+            setActivePokemonNo(pokestopData.getFortData().getLureInfo().getActivePokemonId().getNumber());
+            setActivePokemonName(pokestopData.getFortData().getLureInfo().getActivePokemonId().toString());
+        }
+
     }
 
     public DateTime getExpiryTime()
@@ -60,16 +64,19 @@ public class PokeStop extends RealmObject
 
     public MarkerOptions getMarker(Context context)
     {
+
         String uri = "";
         String snippetMessage  = "";
         String iconMessage = "Pokestop";
         if(hasLureInfo) //There is a lure active at the pokestop
         {
-            if(getExpiryTime().isAfter(new Instant()))  //The lure is currently active
+
+
+            if(true)  //The lure is currently active
             {
-                Interval interval = new Interval(new Instant(), getExpiryTime());
-                DateTime dt = new DateTime(interval.toDurationMillis());
-                DateTimeFormatter fmt = DateTimeFormat.forPattern("mm:ss");
+                //Interval interval = new Interval(new Instant(), getExpiryTime());
+                //DateTime dt = new DateTime(interval.toDurationMillis());
+                //DateTimeFormatter fmt = DateTimeFormat.forPattern("mm:ss");
 
                 String activePokemonName = getActivePokemonName();
                 activePokemonName = activePokemonName.substring(0, 1).toUpperCase() + activePokemonName.substring(1).toLowerCase();
@@ -92,7 +99,7 @@ public class PokeStop extends RealmObject
     public String getLureExpiryTime()
     {
         String result = "";
-        if(hasLureInfo && getExpiryTime().isAfter(new Instant()))
+        if(hasLureInfo )
         {
             Interval interval = new Interval(new Instant(), getExpiryTime());
             DateTime dt = new DateTime(interval.toDurationMillis());
@@ -116,7 +123,7 @@ public class PokeStop extends RealmObject
 
         String uri = "stop";
 
-        if(hasLureInfo && getExpiryTime().isAfter(new Instant())) {
+        if(hasLureInfo) {
             uri = "stop_lure";
             pokeStopType = DrawableUtils.LuredPokeStopType;
             //if ShowLuredPokemon is enabled, show the icon of the lured pokemon
@@ -134,7 +141,7 @@ public class PokeStop extends RealmObject
         }
 
         int resourceID = context.getResources().getIdentifier(uri, "drawable", context.getPackageName());
-        Bitmap out = DrawableUtils.getBitmapFromView(resourceID, getLureExpiryTime(), context, pokeStopType);
+        Bitmap out = DrawableUtils.getBitmapFromView(resourceID, null, context, pokeStopType);
 
         return out;
     }
