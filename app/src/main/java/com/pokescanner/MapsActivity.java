@@ -172,7 +172,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @BindView(R.id.btnHeatMapMode)
     ImageButton btnHeatMapMode;
     @BindView(R.id.btnCenterCamera)
-    ImageButton btnCenterCamera;
+    com.github.clans.fab.FloatingActionButton btnCenterCamera;
     @BindView(R.id.btnOverlayActivity)
     ImageButton btnOverlayActivity;
     boolean AutoScan = false;
@@ -231,6 +231,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     //Used for determining Scan status
 
     boolean LIST_MODE = false;
+    boolean CENTER_ALWAYS = false;
     //Used for our refreshing of the map
     Subscription pokeonRefresher;
     Subscription gymstopRefresher;
@@ -240,22 +241,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onCreate(Bundle savedInstanceState) {
 
 
-        MultiAccountLoader.mConnection = new ServiceConnection() {
 
-            @Override
-            public void onServiceConnected(ComponentName className,
-                                           IBinder service) {
-                // We've bound to LocalService, cast the IBinder and get LocalService instance
-                AutoScanService.LocalBinder binder = (AutoScanService.LocalBinder) service;
-                mService = binder.getService();
-                mBound = true;
-            }
-
-            @Override
-            public void onServiceDisconnected(ComponentName arg0) {
-                mBound = false;
-            }
-        };
         instance = this;
         mGoogleWearApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
@@ -590,7 +576,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @OnClick(R.id.btnSettings)
     public void onSettingsClick() {
         MultiAccountLoader.setContext(this);
-        MultiAccountLoader.setmGoogleApiClient(mGoogleApiClient);
+        MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
         Intent settingsIntent = new Intent(MapsActivity.this, SettingsActivity.class);
         startActivity(settingsIntent);
     }
@@ -652,6 +638,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         if (!MultiAccountLoader.areThreadsRunning()&&!MultiAccountLoader.autoScan) {
             showProgressbar(false);
+        }
+
+        if(CENTER_ALWAYS){
+            moveCameraToCurrentPosition(true);
         }
 
         if (!LIST_MODE) {
@@ -862,6 +852,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 });
     }
 
+    int tempOldProgress;
+
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void createCircle(ScanCircleEvent event) {
         if (event.pos != null)
@@ -877,12 +869,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             float progress = (float) iprogressBar * 100 / scanMap.size();
             progressBar.setProgress((int) progress);
-            if((int) progress == 100) {
-                showProgressbar(false);
-            }
-            if((int) progress>=100){
+            if((int) progress <tempOldProgress) {
                 removeCircleArray();
+                showProgressbar(false);
+            } else {
+                showProgressbar(true);
             }
+            tempOldProgress = iprogressBar;
 
         }
     }
@@ -934,6 +927,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onResume() {
         super.onResume();
+        MultiAccountLoader.mConnection = new ServiceConnection() {
+
+            @Override
+            public void onServiceConnected(ComponentName className,
+                                           IBinder service) {
+                // We've bound to LocalService, cast the IBinder and get LocalService instance
+                AutoScanService.LocalBinder binder = (AutoScanService.LocalBinder) service;
+                mService = binder.getService();
+                mBound = true;
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName arg0) {
+                mBound = false;
+            }
+        };
         if (pokemonsMarkerMap != null)
             pokemonsMarkerMap.clear();
         if (mMap != null)
@@ -1683,6 +1692,23 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         moveCameraToCurrentPosition(true);
 
     }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    @OnLongClick(R.id.btnCenterCamera)
+    public boolean btnCenterAlways(){
+        floatingActionMenu.close(true);
+        if(CENTER_ALWAYS){
+            CENTER_ALWAYS = false;
+            btnCenterCamera.setColorNormal(ResourcesCompat.getColor(getResources(),R.color.colorPrimary,null));
+
+        } else {
+            CENTER_ALWAYS = true;
+            btnCenterCamera.setColorNormal(ResourcesCompat.getColor(getResources(),R.color.colorAccent,null));
+        }
+
+        return true;
+    }
+
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
@@ -1786,7 +1812,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 info.addView(title);
                 info.addView(snippet);
-                info.addView(navigate);
+                //info.addView(navigate);
 
                 return info;
             }

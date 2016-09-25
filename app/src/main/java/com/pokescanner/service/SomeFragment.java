@@ -2,6 +2,7 @@ package com.pokescanner.service;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -14,6 +15,7 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
@@ -22,6 +24,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v4.util.ArrayMap;
 import android.support.v7.app.AlertDialog;
 import android.view.Gravity;
@@ -126,7 +129,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     ImageButton btnAutoScan;
     ImageButton btnHeatMapMode;
     ImageButton btnClear;
-    ImageButton btnCenterCamera;
+    com.github.clans.fab.FloatingActionButton btnCenterCamera;
     ImageButton btnStopOverlayActivity;
     ImageButton btnMinimize;
 
@@ -175,6 +178,8 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     public HeatmapTileProvider mHeatProvider;
 
     String TAG = "wear";
+
+    boolean CENTER_ALWAYS = false;
 
     int pos = 1;
     //Used for determining Scan status
@@ -250,11 +255,17 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                 toggleMapType();
             }
         });
-        btnCenterCamera = (ImageButton) v.findViewById(R.id.btnOverlayCenterCamera);
+        btnCenterCamera = (com.github.clans.fab.FloatingActionButton) v.findViewById(R.id.btnOverlayCenterCamera);
         btnCenterCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 btnCenterCamera();
+            }
+        });
+        btnCenterCamera.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+                return btnCenterAlways();
             }
         });
         btnMinimize = (ImageButton) v.findViewById(R.id.btnOverlayMinimize);
@@ -326,7 +337,6 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     @Override
     public void onResume() {
         mapView.onResume();
-
         super.onResume();
     }
 
@@ -533,27 +543,30 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
         return Color.argb(alpha, red, green, blue);
     }
 
+    int tempOldProgress;
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void createCircle(ScanCircleEvent event) {
         if (event.pos != null)
         {
+
+            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+            int iprogressBar = mPrefs.getInt("progressbar",1);
+
+            float progress = (float) iprogressBar * 100 / scanMap.size();
+            progressBar.setProgress((int) progress);
+            if((int) progress <tempOldProgress) {
+                removeCircleArray();
+                showProgressbar(false);
+            } else {
+                showProgressbar(true);
+            }
             CircleOptions circleOptions = new CircleOptions()
                     .radius(80)
                     .strokeWidth(0)
                     .fillColor(adjustAlpha(event.color,0.5f))
                     .center(event.pos);
             circleArray.add(mMap.addCircle(circleOptions));
-            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(getContext());
-            int iprogressBar = mPrefs.getInt("progressbar",1);
-
-            float progress = (float) iprogressBar * 100 / scanMap.size();
-            progressBar.setProgress((int) progress);
-            if((int) progress == 100) {
-                showProgressbar(false);
-            }
-            if((int) progress>=100){
-                removeCircleArray();
-            }
+            tempOldProgress = iprogressBar;
 
         }
     }
@@ -592,11 +605,29 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                 });
     }
 
+    public boolean btnCenterAlways(){
+        floatingActionMenu.close(true);
+        if(CENTER_ALWAYS){
+            CENTER_ALWAYS = false;
+            btnCenterCamera.setColorNormal(ResourcesCompat.getColor(getResources(),R.color.colorPrimary,null));
+
+        } else {
+            CENTER_ALWAYS = true;
+            btnCenterCamera.setColorNormal(ResourcesCompat.getColor(getResources(),R.color.colorAccent,null));
+        }
+
+        return true;
+    }
+
     //Map related Functions
     public void refreshMap() {
 
         if (!MultiAccountLoader.areThreadsRunning()&&!MultiAccountLoader.autoScan) {
             showProgressbar(false);
+        }
+
+        if(CENTER_ALWAYS){
+            moveCameraToCurrentPosition(true);
         }
 
         if (!LIST_MODE) {
@@ -720,13 +751,13 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             }
 
 
-            Intent intentService = new Intent(getActivity(), AutoScanService.class);
-            getActivity().bindService(intentService,MultiAccountLoader.mConnection,Context.BIND_AUTO_CREATE);
+            Intent intentService = new Intent(MapsActivity.instance, AutoScanService.class);
+            MapsActivity.instance.bindService(intentService,MultiAccountLoader.mConnection,Context.BIND_AUTO_CREATE);
             //StartStopSendToWear(true, scanMap.size());
         } else {
             btnAutoScan.setBackground(getActivity().getDrawable(R.drawable.circle_button));
             Intent intentService = new Intent(getActivity(), AutoScanService.class);
-            getActivity().unbindService(MultiAccountLoader.mConnection);
+            MapsActivity.instance.unbindService(MultiAccountLoader.mConnection);
             MultiAccountLoader.cancelAllThreads();
             //StartStopSendToWear(false, 1);
         }
@@ -1090,7 +1121,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
 
                 info.addView(title);
                 info.addView(snippet);
-                info.addView(navigate);
+                //info.addView(navigate);
 
                 return info;
             }
