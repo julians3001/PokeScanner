@@ -101,4 +101,5 @@ dependencies {
     compile 'com.google.android.gms:play-services-auth:9.2.1'
     compile 'com.google.android.gms:play-services-gcm:9.2.1'
     wearApp project(':wear')
+    compile 'junit:junit:4.12'
 }

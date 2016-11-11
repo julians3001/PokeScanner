@@ -29,34 +29,35 @@ public class MultiAccountLoader {
     static public PokemonGo[] cachedGo = new PokemonGo[40];
     static public boolean SCANNING_STATUS = false;
     static public ServiceConnection mConnection;
+    static public boolean cancelThreads = false;
 
     static public void startThreads() {
         scanMaps = new ArrayList<>();
         threads = new ArrayList<>();
 
         int userSize = users.size();
-        double dividedValue = (float) scanMap.size()/userSize;
+        double dividedValue = (float) scanMap.size() / userSize;
         int scanMapSplitSize = (int) Math.ceil(dividedValue);
 
-        System.out.println("Divided Value:"+dividedValue);
+        System.out.println("Divided Value:" + dividedValue);
 
-        scanMaps = MyPartition.partition(scanMap,scanMapSplitSize);
+        scanMaps = MyPartition.partition(scanMap, scanMapSplitSize);
 
 
         System.out.println("Scan Map Size: " + scanMaps.size());
 
-        for (int i = 0;i<scanMaps.size();i++) {
+        for (int i = 0; i < scanMaps.size(); i++) {
             List<LatLng> tempMap = scanMaps.get(i);
             User tempUser = users.get(i);
-            threads.add(new ObjectLoaderPTC(tempUser,tempMap,SLEEP_TIME,i,mGoogleApiClient,context));
+            threads.add(new ObjectLoaderPTC(tempUser, tempMap, SLEEP_TIME, i, mGoogleApiClient, context));
         }
 
-        for (Thread thread: threads) {
+        for (Thread thread : threads) {
             thread.start();
         }
         SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor prefsEditor = mPrefs.edit();
-        prefsEditor.putInt("progressbar",1);
+        prefsEditor.putInt("progressbar", 1);
         prefsEditor.commit();
     }
 
@@ -68,11 +69,11 @@ public class MultiAccountLoader {
         MultiAccountLoader.users = users;
     }
 
-    static public void setmGoogleApiClient(GoogleApiClient mGoogleApiClient){
+    static public void setmGoogleApiClient(GoogleApiClient mGoogleApiClient) {
         MultiAccountLoader.mGoogleApiClient = mGoogleApiClient;
     }
 
-    static public void setContext(Context context){
+    static public void setContext(Context context) {
         MultiAccountLoader.context = context;
     }
 
@@ -81,35 +82,36 @@ public class MultiAccountLoader {
     }
 
     public static boolean areThreadsRunning() {
-        if (threads==null) {
+        if (threads == null) {
             return false;
         }
         if (threads.size() != 0) {
-            if (threads.get(0).getState()== Thread.State.TERMINATED) {
+            if (threads.get(0).getState() == Thread.State.TERMINATED) {
                 return false;
-            }else {
+            } else {
                 return true;
             }
-        }else {
+        } else {
             return false;
         }
     }
 
     static public void cancelAllThreads() {
+        cancelThreads = true;
 
-                while (threads != null) {
-                    for (Thread thread: threads) {
-                        try {
-                            thread.interrupt();
-                            thread.join();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }finally {
-                            threads = null;
-                        }
-                    }
+        while (threads != null) {
+            for (Thread thread : threads) {
+                try {
+                    thread.interrupt();
+                    thread.join();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    threads = null;
                 }
-
+            }
+        }
+        cancelThreads = false;
 
     }
 }

@@ -51,6 +51,7 @@ import com.pokescanner.utils.DrawableUtils;
 import com.pokescanner.utils.UiUtils;
 
 import org.greenrobot.eventbus.EventBus;
+import org.junit.rules.Stopwatch;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -94,7 +95,7 @@ public class ObjectLoaderPTC extends Thread {
             CredentialProvider provider = null;
 
 
-            if(MultiAccountLoader.cachedGo[position]==null) {
+            if (MultiAccountLoader.cachedGo[position] == null) {
                 OkHttpClient client = new OkHttpClient();
                 //Create our provider and set it to null
 
@@ -116,141 +117,167 @@ public class ObjectLoaderPTC extends Thread {
             }
 
             go = MultiAccountLoader.cachedGo[position];
-            if(go == null){
+            if (go == null) {
                 return;
             }
 
-                int scanPos = 0;
+            int scanPos = 0;
 
 
+            if (go != null) {
+                System.out.println("Erfolgreich eingeloggt: " + user.getUsername());
+                for (LatLng pos : scanMap) {
+                    go.setLatitude(pos.latitude);
+                    go.setLongitude(pos.longitude);
+                    go.setAltitude(0);
+                    Map map = go.getMap();
+                    if(MultiAccountLoader.cancelThreads){
+                        return;
+                    }
+                    final Collection<CatchablePokemon> catchablePokemon = map.getCatchablePokemon();
 
-                if (go != null) {
-                    for (LatLng pos : scanMap) {
-                            go.setLatitude(pos.latitude);
-                            go.setLongitude(pos.longitude);
-                        Map map = go.getMap();
-                        final Collection<CatchablePokemon> catchablePokemon = map.getCatchablePokemon();
+                    final List<com.pokegoapi.api.gym.Gym> collectionGyms = map.getGyms();
+                    final Collection<Pokestop> collectionPokeStops = map.getMapObjects().getPokestops();
+                    boolean isBanned = map.getNearbyPokemon().size() > 0 ? false : true;
 
-                            final List<com.pokegoapi.api.gym.Gym> collectionGyms = map.getGyms();
-                            final Collection<Pokestop> collectionPokeStops = map.getMapObjects().getPokestops();
+                    EventBus.getDefault().post(new ScanCircleEvent(pos, isBanned,user.getUsername(), user.getAccountColor()));
+                    final ArrayList<EncounterResult> encounterResults = new ArrayList<>();
+                    //long starttime = System.currentTimeMillis();
+                    for(CatchablePokemon pokemonOut : catchablePokemon){
+                        if(MultiAccountLoader.cancelThreads){
+                            return;
+                        }
+                        EncounterResult encResult = null;
+                        try {
+                            encResult = pokemonOut.encounterPokemon();
+                        } catch (LoginFailedException e) {
+                            e.printStackTrace();
+                        } catch (RemoteServerException e) {
+                            e.printStackTrace();
+                        }
+                        encounterResults.add(encResult);
+                    }
 
-                            EventBus.getDefault().post(new ScanCircleEvent(pos,user.getAccountColor()));
+                    //System.out.println("Duration: " +(System.currentTimeMillis()-starttime));
 
-                            realm = Realm.getDefaultInstance();
-                            realm.executeTransaction(new Realm.Transaction() {
-                                @Override
-                                public void execute(Realm realm) {
-                                    for (CatchablePokemon pokemonOut : catchablePokemon){
-                                        EncounterResult encResult = null;
-                                        try {
-                                            encResult = pokemonOut.encounterPokemon();
-                                        } catch (LoginFailedException e) {
-                                            e.printStackTrace();
-                                        } catch (RemoteServerException e) {
-                                            e.printStackTrace();
-                                        }
-                                        Pokemon pokemonEncounter = new Pokemon(go,encResult.getPokemonData());
-
-
-                                        Pokemons pokemon = new Pokemons(pokemonOut);
-                                        pokemon.setIvInPercentage(pokemonEncounter.getIvInPercentage());
-                                        pokemon.setIndividualAttack(pokemonEncounter.getIndividualAttack());
-                                        pokemon.setIndividualDefense(pokemonEncounter.getIndividualDefense());
-                                        pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
-                                        ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
-                                        boolean alreadyNotificated = false;
-                                        if(pokemon.getExpires()<0){
-                                            long currentTime = System.currentTimeMillis();
-                                            pokemon.setExpires(currentTime+900000);
-                                            pokemon.setFoundTime(currentTime);
-                                            for(Pokemons allPokemon : pokelist){
-                                                if(allPokemon.getEncounterid()==pokemon.getEncounterid()){
-                                                    alreadyNotificated = true;
-                                                    break;
-                                                }
-                                            }
-                                        }
+                    realm = Realm.getDefaultInstance();
+                    //System.out.println("Realm start: "+user.getUsername());
+                    realm.executeTransaction(new Realm.Transaction() {
+                        @Override
+                        public void execute(Realm realm) {
+                            for (CatchablePokemon pokemonOut : catchablePokemon) {
+                                if(MultiAccountLoader.cancelThreads){
+                                    return;
+                                }
 
 
-                                        try {
-                                            if(!pokelist.contains(pokemon)){
-                                                savePokemonToFile(pokemon);
-                                            }
-                                        } catch (IOException e) {
-                                            e.printStackTrace();
-                                        }
-                                        realm.copyToRealmOrUpdate(pokemon);
-                                        if(UiUtils.isPokemonNotification(pokemon)&&!pokelist.contains(pokemon)&&!alreadyNotificated){
+                                Pokemon pokemonEncounter = new Pokemon(go, encounterResults.get(0).getPokemonData());
+                                encounterResults.remove(0);
 
+                                Pokemons pokemon = new Pokemons(pokemonOut);
+                                pokemon.setIvInPercentage(pokemonEncounter.getIvInPercentage());
+                                pokemon.setIndividualAttack(pokemonEncounter.getIndividualAttack());
+                                pokemon.setIndividualDefense(pokemonEncounter.getIndividualDefense());
+                                pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
+                                ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+                                boolean alreadyNotificated = false;
 
-                                            Intent launchIntent = new Intent(context, MapsActivity.class);
-                                            launchIntent.setAction(Long.toString(System.currentTimeMillis()));
-                                            launchIntent.putExtra("methodName","newPokemon");
-                                            Gson gson = new Gson();
-                                            String json = gson.toJson(pokemon,new TypeToken<Pokemons>() {}.getType());
-                                            launchIntent.putExtra("pokemon",json);
-                                            PendingIntent pIntent = PendingIntent.getActivity(context, 0,   launchIntent, PendingIntent.FLAG_ONE_SHOT);
-
-                                            Bitmap bitmap = DrawableUtils.getBitmapFromView(pokemon.getResourceID(context),"",context,DrawableUtils.PokemonType);
-                                            NotificationCompat.Builder mBuilder =
-                                                    new NotificationCompat.Builder(context)
-                                                            .setSmallIcon(R.drawable.ic_refresh_white_36dp)
-                                                            .setLargeIcon(bitmap)
-                                                            .setContentTitle("New Pokémon nearby")
-                                                            .setVibrate(new long[]{100,100})
-                                                            .setContentIntent(pIntent)
-                                                            .setAutoCancel(true)
-                                                            .setContentText(pokemon.getFormalName(context)+" ("+DrawableUtils.getExpireTime(pokemon.getExpires())+")");
-                                            Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                                            mBuilder.setSound(alarmSound);
-                                            NotificationManager mNotificationManager =
-                                                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-                                            if(pokemon.isNotExpired())
-                                                mNotificationManager.notify( (int) System.currentTimeMillis(), mBuilder.build());
+                                if (pokemon.getExpires() < 0) {
+                                    long currentTime = System.currentTimeMillis();
+                                    pokemon.setExpires(currentTime + 900000);
+                                    pokemon.setFoundTime(currentTime);
+                                    for (Pokemons allPokemon : pokelist) {
+                                        if (allPokemon.getEncounterid() == pokemon.getEncounterid()) {
+                                            alreadyNotificated = true;
+                                            break;
                                         }
                                     }
-
-                                    for (com.pokegoapi.api.gym.Gym gymOut : collectionGyms)
-                                        realm.copyToRealmOrUpdate(new Gym(gymOut));
-
-                                    for (Pokestop pokestopOut : collectionPokeStops)
-                                        realm.copyToRealmOrUpdate(new PokeStop(pokestopOut));
                                 }
-                            });
 
-                            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
-                            SharedPreferences.Editor prefsEditor = mPrefs.edit();
-                            progressBar = mPrefs.getInt("progressbar",0);
-                            progressBar++;
-                            prefsEditor.putInt("progressbar",progressBar);
-                            prefsEditor.commit();
-                        
+                                try {
+                                    if (!pokelist.contains(pokemon)) {
+                                        savePokemonToFile(pokemon);
+                                    }
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                                realm.copyToRealmOrUpdate(pokemon);
+                                if (UiUtils.isPokemonNotification(pokemon) && !pokelist.contains(pokemon) && !alreadyNotificated) {
 
-                            sendPokemonListToWear();
 
-                            realm.close();
-                            Thread.sleep(SLEEP_TIME);
-                    }
+                                    Intent launchIntent = new Intent(context, MapsActivity.class);
+                                    launchIntent.setAction(Long.toString(System.currentTimeMillis()));
+                                    launchIntent.putExtra("methodName", "newPokemon");
+                                    Gson gson = new Gson();
+                                    String json = gson.toJson(pokemon, new TypeToken<Pokemons>() {
+                                    }.getType());
+                                    launchIntent.putExtra("pokemon", json);
+                                    PendingIntent pIntent = PendingIntent.getActivity(context, 0, launchIntent, PendingIntent.FLAG_ONE_SHOT);
+
+                                    Bitmap bitmap = DrawableUtils.getBitmapFromView(pokemon.getResourceID(context), "", context, DrawableUtils.PokemonType);
+                                    NotificationCompat.Builder mBuilder =
+                                            new NotificationCompat.Builder(context)
+                                                    .setSmallIcon(R.drawable.ic_refresh_white_36dp)
+                                                    .setLargeIcon(bitmap)
+                                                    .setContentTitle("New Pokémon nearby")
+                                                    .setVibrate(new long[]{100, 100})
+                                                    .setContentIntent(pIntent)
+                                                    .setAutoCancel(true)
+                                                    .setContentText(pokemon.getFormalName(context) + " (" + pokemon.getIvInPercentage() + "%) (" + DrawableUtils.getExpireTime(pokemon.getExpires()) + ")");
+                                    Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                                    mBuilder.setSound(alarmSound);
+                                    NotificationManager mNotificationManager =
+                                            (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                                    if (pokemon.isNotExpired())
+                                        mNotificationManager.notify((int) System.currentTimeMillis(), mBuilder.build());
+                                }
+                            }
+
+                            for (com.pokegoapi.api.gym.Gym gymOut : collectionGyms)
+                                realm.copyToRealmOrUpdate(new Gym(gymOut));
+
+                            for (Pokestop pokestopOut : collectionPokeStops)
+                                realm.copyToRealmOrUpdate(new PokeStop(pokestopOut));
+                        }
+                    });
+                    //System.out.println("Realm end: "+user.getUsername());
+                    SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
+                    SharedPreferences.Editor prefsEditor = mPrefs.edit();
+                    progressBar = mPrefs.getInt("progressbar", 0);
+                    progressBar++;
+                    prefsEditor.putInt("progressbar", progressBar);
+                    prefsEditor.commit();
+
+
+                    sendPokemonListToWear();
+
+                    realm.close();
+                    Thread.sleep(SLEEP_TIME);
                 }
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
-            System.out.println("ObjectLoader: " + user.getUsername());
+            System.out.println("InterruptedException: " + user.getUsername());
         } catch (RemoteServerException e) {
             e.printStackTrace();
-            System.out.println("ObjectLoader: " + user.getUsername());
+            System.out.println("RemoteServerException: " + user.getUsername());
+            this.run();
         } catch (LoginFailedException e) {
             e.printStackTrace();
-            System.out.println("ObjectLoader: " + user.getUsername());
-        }catch (AsyncPokemonGoException e) {
+            System.out.println("LoginFailedException: " + user.getUsername());
+            this.run();
+        } catch (AsyncPokemonGoException e) {
             e.printStackTrace();
             MultiAccountLoader.cachedGo[position] = null;
+
             System.out.println("AsyncPokemonGo: " + user.getUsername());
+            this.run();
         }
     }
 
     private void savePokemonToFile(final Pokemons pokemons) throws IOException {
 
-        if(!isExternalStorageWritable()){
+        if (!isExternalStorageWritable()) {
             return;
         }
         openRealm();
@@ -258,16 +285,19 @@ public class ObjectLoaderPTC extends Thread {
             @Override
             public void execute(Realm realmDataBase) {
                 ArrayList<Pokemons> pokelist = new ArrayList<>(realmDataBase.copyFromRealm(realmDataBase.where(Pokemons.class).findAll()));
-                if(!pokelist.contains(pokemons)){
+                if (!pokelist.contains(pokemons)) {
                     realmDataBase.copyToRealmOrUpdate(pokemons);
                 }
             }
         });
         realmDataBase.close();
     }
+
     private void openRealm() {
-        if(!isExternalStorageWritable()){return;}
-        File file = new File(context.getFilesDir()+"/Pokescanner/Db/");
+        if (!isExternalStorageWritable()) {
+            return;
+        }
+        File file = new File(context.getFilesDir() + "/Pokescanner/Db/");
 
         if (!file.exists()) {
             boolean result = file.mkdirs();
@@ -289,12 +319,9 @@ public class ObjectLoaderPTC extends Thread {
     }
 
 
-
-    private void sendPokemonListToWear(){
+    private void sendPokemonListToWear() {
         ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
         listout = new ArrayList<>();
-
-
 
 
         for (int i = 0; i < pokelist.size(); i++) {
@@ -309,10 +336,11 @@ public class ObjectLoaderPTC extends Thread {
 
 
         Gson gson = new Gson();
-        String json = gson.toJson(listout,new TypeToken<ArrayList<Pokemons>>() {}.getType());
+        String json = gson.toJson(listout, new TypeToken<ArrayList<Pokemons>>() {
+        }.getType());
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/pokemonlist");
         putDataMapReq.getDataMap().putString("pokemons", json);
-        putDataMapReq.getDataMap().putInt("progressbar",progressBar);
+        putDataMapReq.getDataMap().putInt("progressbar", progressBar);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         PendingResult<DataApi.DataItemResult> pendingResult =
                 Wearable.DataApi.putDataItem(mGoogleWearApiClient, putDataReq);

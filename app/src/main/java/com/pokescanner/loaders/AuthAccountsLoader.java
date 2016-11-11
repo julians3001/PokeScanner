@@ -51,7 +51,7 @@ public class AuthAccountsLoader extends Thread {
                         go.setLatitude(currentPosition.latitude);
                         go.setLongitude(currentPosition.longitude);
                         Map map = go.getMap();
-                        MapObjects event = map.getMapObjects();
+                        //MapObjects event = map.getMapObjects();
 
                     if (ptcCredentialProvider.getAuthInfo().hasToken()) {
                         user.setStatus(User.STATUS_VALID);

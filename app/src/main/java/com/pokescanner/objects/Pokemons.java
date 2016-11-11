@@ -85,7 +85,13 @@ public class Pokemons  extends RealmObject{
     public MarkerOptions getMarker(Context context) {
         int resourceID = getResourceID(context);
         //Find our interval
-        String timeOut = DrawableUtils.getExpireTime(getExpires());
+        String timeOut;
+
+        if(getExpires()>=0){
+            timeOut = DrawableUtils.getExpireTime(getExpires());
+        } else {
+            timeOut = "Over 90s";
+        }
         //set our location
         LatLng position = new LatLng(getLatitude(), getLongitude());
 

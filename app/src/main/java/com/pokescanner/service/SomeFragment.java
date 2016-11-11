@@ -543,7 +543,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
         return Color.argb(alpha, red, green, blue);
     }
 
-    int tempOldProgress;
+    float tempOldProgress;
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void createCircle(ScanCircleEvent event) {
         if (event.pos != null)
@@ -552,9 +552,11 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(getContext());
             int iprogressBar = mPrefs.getInt("progressbar",1);
 
+
+
             float progress = (float) iprogressBar * 100 / scanMap.size();
             progressBar.setProgress((int) progress);
-            if((int) progress <tempOldProgress) {
+            if(progress <tempOldProgress) {
                 removeCircleArray();
                 showProgressbar(false);
             } else {
@@ -566,7 +568,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     .fillColor(adjustAlpha(event.color,0.5f))
                     .center(event.pos);
             circleArray.add(mMap.addCircle(circleOptions));
-            tempOldProgress = iprogressBar;
+            tempOldProgress = progress;
 
         }
     }

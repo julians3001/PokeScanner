@@ -8,8 +8,12 @@ import com.google.android.gms.maps.model.LatLng;
 public class ScanCircleEvent {
     public LatLng pos;
     public int color;
+    public boolean isBanned;
+    public String username;
 
-    public ScanCircleEvent(LatLng pos, int color) {
+    public ScanCircleEvent(LatLng pos,boolean isBanned,String username, int color) {
+        this.isBanned = isBanned;
+        this.username = username;
         this.pos = pos;
         this.color = color;
     }
