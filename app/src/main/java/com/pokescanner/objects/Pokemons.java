@@ -76,6 +76,7 @@ public class Pokemons  extends RealmObject{
         return DrawableUtils.getResourceID(getNumber(),context);
     }
     public boolean isNotExpired() {
+        if(getExpires()==-1) return true;
         //Create a date
         DateTime expires = new DateTime(getExpires());
         //If this date is after the current time then it has not expired!
@@ -85,13 +86,8 @@ public class Pokemons  extends RealmObject{
     public MarkerOptions getMarker(Context context) {
         int resourceID = getResourceID(context);
         //Find our interval
-        String timeOut;
+        String timeOut = DrawableUtils.getExpireTime(getExpires(), getFoundTime());
 
-        if(getExpires()>=0){
-            timeOut = DrawableUtils.getExpireTime(getExpires());
-        } else {
-            timeOut = "Over 90s";
-        }
         //set our location
         LatLng position = new LatLng(getLatitude(), getLongitude());
 
@@ -121,7 +117,7 @@ public class Pokemons  extends RealmObject{
 
     public Marker updateMarker(Marker marker,Context context) {
 
-        String expires = DrawableUtils.getExpireTime(getExpires());
+        String expires = DrawableUtils.getExpireTime(getExpires(),getFoundTime());
 
         Bitmap newbit = DrawableUtils.getBitmapFromView(getResourceID(context),expires,context,DrawableUtils.PokemonType);
 

@@ -89,7 +89,7 @@ public class MarkerDetails
                     .subscribe(new Action1<Long>() {
                         @Override
                         public void call(Long aLong) {
-                            String expires = DrawableUtils.getExpireTime(selectedPokemon.getExpires());
+                            String expires = DrawableUtils.getExpireTime(selectedPokemon.getExpires(), selectedPokemon.getFoundTime());
                             pokemonTimer.setText(expires);
                         }
                     });

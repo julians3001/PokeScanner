@@ -65,6 +65,7 @@ import POGOProtos.Map.Fort.FortDataOuterClass;
 import POGOProtos.Map.Pokemon.MapPokemonOuterClass;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
+import io.realm.RealmResults;
 import okhttp3.OkHttpClient;
 
 public class ObjectLoaderPTC extends Thread {
@@ -92,6 +93,8 @@ public class ObjectLoaderPTC extends Thread {
     @Override
     public void run() {
         try {
+
+
             CredentialProvider provider = null;
 
 
@@ -140,10 +143,11 @@ public class ObjectLoaderPTC extends Thread {
                     final Collection<Pokestop> collectionPokeStops = map.getMapObjects().getPokestops();
                     boolean isBanned = map.getNearbyPokemon().size() > 0 ? false : true;
 
+
                     EventBus.getDefault().post(new ScanCircleEvent(pos, isBanned,user.getUsername(), user.getAccountColor()));
                     final ArrayList<EncounterResult> encounterResults = new ArrayList<>();
                     //long starttime = System.currentTimeMillis();
-                    for(CatchablePokemon pokemonOut : catchablePokemon){
+                    for(final CatchablePokemon pokemonOut : catchablePokemon){
                         if(MultiAccountLoader.cancelThreads){
                             return;
                         }
@@ -156,9 +160,16 @@ public class ObjectLoaderPTC extends Thread {
                             e.printStackTrace();
                         }
                         encounterResults.add(encResult);
-                    }
 
-                    //System.out.println("Duration: " +(System.currentTimeMillis()-starttime));
+                        final Pokemons pokemon = new Pokemons(pokemonOut);
+                        MapsActivity.instance.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                MapsActivity.instance.cleanPokemon(pokemon.getEncounterid());
+                            }
+                        });
+
+                    }
 
                     realm = Realm.getDefaultInstance();
                     //System.out.println("Realm start: "+user.getUsername());
@@ -173,19 +184,22 @@ public class ObjectLoaderPTC extends Thread {
 
                                 Pokemon pokemonEncounter = new Pokemon(go, encounterResults.get(0).getPokemonData());
                                 encounterResults.remove(0);
-
+                                long currentTime = System.currentTimeMillis();
                                 Pokemons pokemon = new Pokemons(pokemonOut);
+
+
                                 pokemon.setIvInPercentage(pokemonEncounter.getIvInPercentage());
                                 pokemon.setIndividualAttack(pokemonEncounter.getIndividualAttack());
                                 pokemon.setIndividualDefense(pokemonEncounter.getIndividualDefense());
                                 pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
+                                pokemon.setFoundTime(currentTime);
                                 ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
                                 boolean alreadyNotificated = false;
 
                                 if (pokemon.getExpires() < 0) {
-                                    long currentTime = System.currentTimeMillis();
-                                    pokemon.setExpires(currentTime + 900000);
-                                    pokemon.setFoundTime(currentTime);
+
+                                   // pokemon.setExpires(currentTime + 900000);
+
                                     for (Pokemons allPokemon : pokelist) {
                                         if (allPokemon.getEncounterid() == pokemon.getEncounterid()) {
                                             alreadyNotificated = true;
@@ -201,6 +215,7 @@ public class ObjectLoaderPTC extends Thread {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
+
                                 realm.copyToRealmOrUpdate(pokemon);
                                 if (UiUtils.isPokemonNotification(pokemon) && !pokelist.contains(pokemon) && !alreadyNotificated) {
 
@@ -223,7 +238,7 @@ public class ObjectLoaderPTC extends Thread {
                                                     .setVibrate(new long[]{100, 100})
                                                     .setContentIntent(pIntent)
                                                     .setAutoCancel(true)
-                                                    .setContentText(pokemon.getFormalName(context) + " (" + pokemon.getIvInPercentage() + "%) (" + DrawableUtils.getExpireTime(pokemon.getExpires()) + ")");
+                                                    .setContentText(pokemon.getFormalName(context) + " (" + pokemon.getIvInPercentage() + "%) (" + DrawableUtils.getExpireTime(pokemon.getExpires(),pokemon.getFoundTime()) + ")");
                                     Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                                     mBuilder.setSound(alarmSound);
                                     NotificationManager mNotificationManager =

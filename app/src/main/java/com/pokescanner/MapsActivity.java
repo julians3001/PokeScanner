@@ -64,6 +64,7 @@ import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
@@ -643,10 +644,24 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 //Load our Pokemon Array
                 ArrayList<Pokemons> pokemons = new ArrayList<Pokemons>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+
+                ArrayList<Pokemons> pokemonsCollection = new ArrayList<>(pokemonsMarkerMap.keySet());
+
+                for(int i = 0;i<pokemonsCollection.size();i++){
+                    if(!pokemons.contains(pokemonsCollection.get(i))){
+                        if (pokemonsMarkerMap.get(pokemonsCollection.get(i)) != null)
+                            pokemonsMarkerMap.get(pokemonsCollection.get(i)).remove();
+                        pokemonsMarkerMap.remove(pokemonsCollection.get(i));
+                        System.out.println(pokemonsCollection.get(i).getFormalName(this) + " removed");
+                    }
+                }
+
                 //Okay so we're going to fix the annoying issue where the markers were being constantly redrawn
                 for (int i = 0; i < pokemons.size(); i++) {
+
                     //Get our pokemon from the list
                     Pokemons pokemon = pokemons.get(i);
+
                     //Is our pokemon contained within the bounds of the camera?
                     if (curScreen.contains(new LatLng(pokemon.getLatitude(), pokemon.getLongitude()))) {
                         //If yes then has he expired?
@@ -674,6 +689,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 } else {
                                     //If our pokemon wasn't in our hashmap lets add him
                                     pokemonsMarkerMap.put(pokemon, mMap.addMarker(pokemon.getMarker(this)));
+                                    System.out.println(pokemon.getFormalName(this) + " added");
                                 }
                             }
                         } else {
@@ -1498,16 +1514,30 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         floatingActionMenu.close(false);
     }
 
+    boolean nightMode = false;
+
     @OnClick(R.id.btnSataliteMode)
     public void toggleMapType() {
         if (mMap != null) {
-            if (mMap.getMapType() == GoogleMap.MAP_TYPE_NORMAL) {
+
+            if(nightMode){
+                mMap.setMapStyle(null);
+                nightMode = false;
+            } else {
+                mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.maps_style_night));
+                nightMode = true;
+            }
+
+
+
+            /*if (mMap.getMapType() == GoogleMap.MAP_TYPE_NORMAL) {
                 mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
                 btnSataliteMode.setImageResource(R.drawable.ic_map_white_24dp);
             } else {
                 mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
                 btnSataliteMode.setImageResource(R.drawable.ic_satellite_white_24dp);
-            }
+            }*/
+            //mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.maps_style_night));
         }
         floatingActionMenu.close(true);
     }
@@ -1517,6 +1547,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @SuppressWarnings({"MissingPermission"})
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+
         System.out.println("Map ready");
         if (PermissionUtils.doWeHaveGPSandLOC(this)) {
             mMap.setMyLocationEnabled(true);
@@ -1683,6 +1714,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    public void cleanPokemon(long encounterid){
+        final long e = encounterid;
+        realm.executeTransaction(new Realm.Transaction() {
+            @Override
+            public void execute(Realm realm) {
+                realm.where(Pokemons.class).equalTo("encounterid",e).findAll().deleteAllFromRealm();
+            }
+        });
+    }
+
     @OnClick(R.id.btnCenterCamera)
     public void btnCenterCamera() {
         floatingActionMenu.close(true);
@@ -1795,7 +1836,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 snippet.setGravity(Gravity.CENTER);
                 if (markerKey instanceof Pokemons) {
                     Pokemons pokemons = ((Pokemons) markerKey);
-                    snippet.setText(MapsActivity.this.getText(R.string.expires_in) + " " + DrawableUtils.getExpireTime(pokemons.getExpires()) + "\n" + "Attack: " + pokemons.getIndividualAttack() + "\n" + "Defense: " + pokemons.getIndividualDefense() + "\n" + "Stamina: " + pokemons.getIndividualStamina());
+                    snippet.setText(MapsActivity.this.getText(R.string.expires_in) + " " + DrawableUtils.getExpireTime(pokemons.getExpires(), pokemons.getFoundTime()) + "\n" + "Attack: " + pokemons.getIndividualAttack() + "\n" + "Defense: " + pokemons.getIndividualDefense() + "\n" + "Stamina: " + pokemons.getIndividualStamina());
                 } else {
                     snippet.setText(marker.getSnippet());
                     info.addView(title);

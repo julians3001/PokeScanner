@@ -76,7 +76,7 @@ public class PokemonListLoader {
 
     public static void populatePokemonList(Context context) throws IOException {
         Realm realm = Realm.getDefaultInstance();
-        if (realm.where(FilterItem.class).findAll().size() != 151) {
+        if (realm.where(FilterItem.class).findAll().size() != 251) {
             InputStream is = context.getAssets().open("pokemons.json");
             int size = is.available();
             byte[] buffer = new byte[size];
@@ -99,7 +99,7 @@ public class PokemonListLoader {
 
     public static void populateNotPokemonList(Context context) throws IOException {
         Realm realm = Realm.getDefaultInstance();
-        if (realm.where(NotificationItem.class).findAll().size() != 151) {
+        if (realm.where(NotificationItem.class).findAll().size() != 251) {
             InputStream is = context.getAssets().open("pokemons.json");
             int size = is.available();
             byte[] buffer = new byte[size];

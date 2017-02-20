@@ -32,7 +32,17 @@ public class DrawableUtils
     public static final int YellowGymType = 3;
     public static final int NeutralGymType = 0;
 
-    public static String getExpireTime(long expireTime) {
+    public static String getExpireTime(long expireTime, long foundTime) {
+        if(expireTime==-1){
+            DateTime dateFound = new DateTime(foundTime+90000);
+            Instant instantFound = new Instant();
+            if(dateFound.isAfter(instantFound)){
+                return "Over 90s";
+            } else {
+
+                return "Over 90s (ood)";
+            }
+        }
         //Create a date from the expire time (Long value)
         DateTime date = new DateTime(expireTime);
         //If our date time is after now then it's expired and we'll return expired (So we don't get an exception

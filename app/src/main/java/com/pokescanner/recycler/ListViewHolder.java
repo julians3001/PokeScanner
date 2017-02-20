@@ -44,7 +44,7 @@ public class ListViewHolder extends RecyclerView.ViewHolder {
     public void bind(final Pokemons pokemons) {
         Bitmap bitmap = DrawableUtils.getBitmapFromView(pokemons.getResourceID(context),"",context,DrawableUtils.PokemonType);
 
-        tvTimer.setText(DrawableUtils.getExpireTime(pokemons.getExpires()));
+        tvTimer.setText(DrawableUtils.getExpireTime(pokemons.getExpires(),pokemons.getFoundTime()));
         PokemonImage.setImageBitmap(bitmap);
         PokemonName.setText(pokemons.getFormalName(context));
         Distance.setText(String.valueOf(Math.round(pokemons.getDistance()))+"m");

@@ -1108,7 +1108,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                 snippet.setGravity(Gravity.CENTER);
                 if (markerKey instanceof Pokemons) {
                     Pokemons pokemons = ((Pokemons) markerKey);
-                    snippet.setText(getActivity().getText(R.string.expires_in) + " " + DrawableUtils.getExpireTime(pokemons.getExpires()) + "\n" + "Attack: " + pokemons.getIndividualAttack() + "\n" + "Defense: " + pokemons.getIndividualDefense() + "\n" + "Stamina: " + pokemons.getIndividualStamina());
+                    snippet.setText(getActivity().getText(R.string.expires_in) + " " + DrawableUtils.getExpireTime(pokemons.getExpires(),pokemons.getFoundTime()) + "\n" + "Attack: " + pokemons.getIndividualAttack() + "\n" + "Defense: " + pokemons.getIndividualDefense() + "\n" + "Stamina: " + pokemons.getIndividualStamina());
                 } else {
                     snippet.setText(marker.getSnippet());
                     info.addView(title);
