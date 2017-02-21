@@ -339,7 +339,7 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
 
         final EditText input = new EditText(getActivity());
 
-        input.setText(preferences.getString(SettingsUtil.SERVER_REFRESH_RATE,"11"));
+        input.setText(preferences.getString(SettingsUtil.SERVER_REFRESH_RATE,"20"));
 
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
         builder.setView(input);

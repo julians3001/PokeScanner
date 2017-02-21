@@ -1,6 +1,7 @@
 package com.pokescanner.loaders;
 
 import com.pokegoapi.auth.PtcCredentialProvider;
+import com.pokegoapi.exceptions.CaptchaActiveException;
 import com.pokegoapi.exceptions.LoginFailedException;
 import com.pokegoapi.exceptions.RemoteServerException;
 import com.pokescanner.events.AuthLoadedEvent;
@@ -24,12 +25,16 @@ public class AuthPTCLoader extends Thread {
     public void run() {
         try {
             OkHttpClient client = new OkHttpClient();
-            PtcCredentialProvider ptcCredentialProvider = new PtcCredentialProvider(client, username, password);
-            if (ptcCredentialProvider.getAuthInfo().hasToken()) {
-                EventBus.getDefault().post(new AuthLoadedEvent(AuthLoadedEvent.OK));
-            }else{
-                EventBus.getDefault().post(new AuthLoadedEvent(AuthLoadedEvent.AUTH_FAILED));
+
+            PtcCredentialProvider ptcCredentialProvider = null;
+            try {
+                ptcCredentialProvider = new PtcCredentialProvider(client, username, password);
+            } catch (CaptchaActiveException e) {
+                e.printStackTrace();
             }
+
+                EventBus.getDefault().post(new AuthLoadedEvent(AuthLoadedEvent.OK));
+
         } catch (LoginFailedException e) {
             EventBus.getDefault().post(new AuthLoadedEvent(AuthLoadedEvent.AUTH_FAILED));
             e.printStackTrace();

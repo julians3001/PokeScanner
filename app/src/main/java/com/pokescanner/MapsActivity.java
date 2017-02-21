@@ -549,6 +549,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
+
                     MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set Context
                     MultiAccountLoader.setContext(this);
@@ -1434,7 +1435,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 radioButton.setText(pokeList.get(i).getFormalName(this));
                 if (SettingsUtil.getSettings(this).isShuffleIcons()) {
-                    uri = "ps" + pokeList.get(i).getNumber();
+                    uri = "p" + pokeList.get(i).getNumber();
                 } else uri = "p" + pokeList.get(i).getNumber();
 
                 int resourceID = getResources().getIdentifier(uri, "drawable", getPackageName());

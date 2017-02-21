@@ -2,6 +2,7 @@ package com.pokescanner.loaders;
 
 import com.google.gson.Gson;
 import com.pokegoapi.auth.GoogleUserCredentialProvider;
+import com.pokegoapi.exceptions.CaptchaActiveException;
 import com.pokegoapi.exceptions.LoginFailedException;
 import com.pokegoapi.exceptions.RemoteServerException;
 import com.pokescanner.events.AuthLoadedEvent;
@@ -56,7 +57,7 @@ public class AuthTokenLoader extends Thread {
 
             GoogleUserCredentialProvider realLogin = new GoogleUserCredentialProvider(client,token.getRefreshToken());
 
-            if (realLogin.getAuthInfo().hasToken()) {
+            if (realLogin.getAuthInfo(true).hasToken()) {
                 EventBus.getDefault().post(new AuthLoadedEvent(AuthLoadedEvent.OK,token));
             }else{
                 EventBus.getDefault().post(new AuthLoadedEvent(AuthLoadedEvent.AUTH_FAILED));
@@ -69,6 +70,8 @@ public class AuthTokenLoader extends Thread {
             EventBus.getDefault().post(new AuthLoadedEvent(AuthLoadedEvent.SERVER_FAILED));
             e.printStackTrace();
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (CaptchaActiveException e) {
             e.printStackTrace();
         }
     }

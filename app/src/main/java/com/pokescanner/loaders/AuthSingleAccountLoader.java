@@ -1,6 +1,7 @@
 package com.pokescanner.loaders;
 
 import com.pokegoapi.auth.PtcCredentialProvider;
+import com.pokegoapi.exceptions.CaptchaActiveException;
 import com.pokegoapi.exceptions.LoginFailedException;
 import com.pokegoapi.exceptions.RemoteServerException;
 import com.pokescanner.objects.User;
@@ -33,13 +34,15 @@ public class AuthSingleAccountLoader extends Thread {
         OkHttpClient client = new OkHttpClient();
         try {
             PtcCredentialProvider ptcCredentialProvider = new PtcCredentialProvider(client, user.getUsername(), user.getPassword());
-            if (ptcCredentialProvider.getAuthInfo().hasToken()) {
+            if (ptcCredentialProvider.getAuthInfo(true).hasToken()) {
                 user.setStatus(User.STATUS_VALID);
             } else {
                 user.setStatus(User.STATUS_INVALID);
             }
         } catch (RemoteServerException | LoginFailedException e) {
             user.setStatus(User.STATUS_INVALID);
+            e.printStackTrace();
+        } catch (CaptchaActiveException e) {
             e.printStackTrace();
         }
 
