@@ -98,6 +98,7 @@ public class ObjectLoaderPTC extends Thread {
     PokemonGo go;
     String url;
     boolean captchaSolved = false;
+    LoginListener loginListener;
 
 
     public ObjectLoaderPTC(User user, List<LatLng> scanMap, int SLEEP_TIME, int pos, GoogleApiClient mGoogleWearApiClient, Context context) {
@@ -121,7 +122,7 @@ public class ObjectLoaderPTC extends Thread {
                 OkHttpClient client = new OkHttpClient();
                 //Create our provider and set it to null
                 MultiAccountLoader.cachedGo[position] = new PokemonGo(client);
-                MultiAccountLoader.cachedGo[position].addListener(new LoginListener() {
+                loginListener = new LoginListener() {
                     @Override
                     public void onLogin(PokemonGo api) {
                         System.out.println("Successfully logged in with SolveCaptchaExample! "+user.getUsername());
@@ -130,13 +131,13 @@ public class ObjectLoaderPTC extends Thread {
 
                     @Override
                     public void onChallenge(PokemonGo api, String challengeURL) {
-                        System.out.println("Captcha received! URL: " + challengeURL);
+                        System.out.println("Captcha received "+user.getUsername()+"! URL: " + challengeURL);
                         url = challengeURL;
                         MapsActivity.instance.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 AlertDialog.Builder alert = new AlertDialog.Builder(MapsActivity.instance);
-                                alert.setTitle("Title here");
+                                alert.setTitle("Captcha "+user.getUsername());
 
                                 WebView wv = new WebView(MapsActivity.instance.getApplicationContext());
                                 wv.getSettings().setJavaScriptEnabled(true);
@@ -159,7 +160,7 @@ public class ObjectLoaderPTC extends Thread {
                                                 Ask for a new challenge url, don't need to check the result,
                                                 because the LoginListener will be called when this completed.
                                             */
-                                                    MultiAccountLoader.cachedGo[position].checkChallenge();
+                                                    //MultiAccountLoader.cachedGo[position].checkChallenge();
                                                 }
                                             } catch (RemoteServerException e) {
                                                 e.printStackTrace();
@@ -196,7 +197,8 @@ public class ObjectLoaderPTC extends Thread {
                         //Todo solve captcha: api.verifyChallenge(token)
                         //completeCaptcha(api, challengeURL);
                     }
-                });
+                };
+                MultiAccountLoader.cachedGo[position].addListener(loginListener);
                 //Is our user google or PTC?
                 if (user.getAuthType() == User.GOOGLE) {
                     if (user.getToken() != null) {
@@ -239,19 +241,18 @@ public class ObjectLoaderPTC extends Thread {
 
             if (go != null) {
                 System.out.println("Erfolgreich eingeloggt: " + user.getUsername());
+                MultiAccountLoader.cachedGo[position].removeListener(loginListener);
                 for (LatLng pos : scanMap) {
-                    go.setLatitude(pos.latitude);
-                    go.setLongitude(pos.longitude);
-                    go.setAltitude(Math.random() * 15.0);
-                    Map map = go.getMap();
+                    go.setLocation(pos.latitude,pos.longitude,Math.random() * 15.0);
+                    go.getMap().awaitUpdate();
                     if(MultiAccountLoader.cancelThreads){
                         return;
                     }
-                    final Collection<CatchablePokemon> catchablePokemon = map.getMapObjects().getPokemon();
+                    final Collection<CatchablePokemon> catchablePokemon = go.getMap().getMapObjects().getPokemon();;
 
-                    final ArrayList<com.pokegoapi.api.gym.Gym> collectionGyms = new ArrayList<>(map.getMapObjects().getGyms());
-                    final Collection<Pokestop> collectionPokeStops = map.getMapObjects().getPokestops();
-                    boolean isBanned = map.getMapObjects().getNearby().size() <= 0;
+                    final ArrayList<com.pokegoapi.api.gym.Gym> collectionGyms = new ArrayList<>(go.getMap().getMapObjects().getGyms());
+                    final Collection<Pokestop> collectionPokeStops = go.getMap().getMapObjects().getPokestops();
+                    boolean isBanned = go.getMap().getMapObjects().getNearby().size() <= 0;
                     System.out.println(user.getUsername() + " is banned: "+isBanned);
 
                     EventBus.getDefault().post(new ScanCircleEvent(pos, isBanned,user.getUsername(), user.getAccountColor()));

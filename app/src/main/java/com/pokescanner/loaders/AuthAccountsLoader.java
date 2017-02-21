@@ -66,13 +66,9 @@ public class AuthAccountsLoader extends Thread {
                     sleep(300);
 
                         go  = new PokemonGo(client);
-                    try {
-                        go.login(ptcCredentialProvider, hasher);
-                    } catch (CaptchaActiveException e) {
-                        e.printStackTrace();
-                    } catch (HashException e) {
-                        e.printStackTrace();
-                    }
+
+                        //go.login(ptcCredentialProvider, hasher);
+
                     LatLng currentPosition = getCurrentLocation();
                         go.setLatitude(currentPosition.latitude);
                         go.setLongitude(currentPosition.longitude);

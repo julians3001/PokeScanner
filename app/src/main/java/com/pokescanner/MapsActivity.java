@@ -549,8 +549,17 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
-
-                    MultiAccountLoader.cachedGo = new PokemonGo[40];
+                    boolean createNewLogin = false;
+                    for(int i = 0 ; i<scanMap.size();i++){
+                        if(MultiAccountLoader.cachedGo[i]==null){
+                            createNewLogin = true;
+                        } else if(MultiAccountLoader.cachedGo[i].hasChallenge()){
+                            MultiAccountLoader.cachedGo[i] = null;
+                        }
+                    }
+                    if(createNewLogin){
+                        MultiAccountLoader.cachedGo = new PokemonGo[40];
+                    }
                     //Set Context
                     MultiAccountLoader.setContext(this);
                     //Begin our threads???
