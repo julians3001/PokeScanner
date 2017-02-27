@@ -19,5 +19,8 @@
     <color name="GymBlue">#802196F3</color>
     <color name="GymYellow">#80FFEB3B</color>
     <color name="GymNeutral">#80FE9E9E</color>
+    <color name="YellowCircle">#ffea00</color>
+    <color name="GreenCircle">#76ff03</color>
+    <color name="RedCircle">#d50000</color>
 
 </resources>

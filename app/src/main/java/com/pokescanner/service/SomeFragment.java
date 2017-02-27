@@ -733,7 +733,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
                     //Set our map
                     MultiAccountLoader.setScanMap(scanMap);
-                    MultiAccountLoader.cachedGo = new PokemonGo[40];
+                    //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
@@ -995,7 +995,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     //MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
-                    MultiAccountLoader.cachedGo = new PokemonGo[40];
+                    //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set Context
                     MultiAccountLoader.setContext(getContext());
                     //Begin our threads???
@@ -1041,7 +1041,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
                     //Set our map
                     MultiAccountLoader.setScanMap(scanMap);
-                    MultiAccountLoader.cachedGo = new PokemonGo[40];
+                    //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI

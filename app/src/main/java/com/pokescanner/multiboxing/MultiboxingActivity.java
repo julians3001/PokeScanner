@@ -38,9 +38,13 @@ import com.google.android.gms.drive.DriveId;
 import com.google.android.gms.drive.OpenFileActivityBuilder;
 import com.google.android.gms.location.LocationServices;
 import com.nononsenseapps.filepicker.FilePickerActivity;
+import com.pokegoapi.api.PokemonGo;
 import com.pokescanner.R;
 import com.pokescanner.loaders.AuthAccountsLoader;
 import com.pokescanner.loaders.AuthSingleAccountLoader;
+import com.pokescanner.loaders.LoginPTC;
+import com.pokescanner.loaders.MultiAccountLoader;
+import com.pokescanner.loaders.PokemonGoWithUsername;
 import com.pokescanner.objects.User;
 
 import java.io.BufferedReader;
@@ -73,6 +77,7 @@ public class MultiboxingActivity extends AppCompatActivity implements
     private MultiboxingAdapter userAdapter;
 
     private Realm realm;
+    public static Activity instance;
     private final static int STORAGE_PERMISSION_REQUESTED = 1300;
 
 
@@ -80,6 +85,7 @@ public class MultiboxingActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
+        instance = this;
         getReadWritePermission();
         setContentView(R.layout.activity_multiboxing);
         ButterKnife.bind(this);
@@ -185,7 +191,7 @@ public class MultiboxingActivity extends AppCompatActivity implements
                 String password = etPassword.getText().toString();
                 int color = userList.size();
 
-                User user = new User(username,password,null,User.PTC,User.STATUS_UNKNOWN);
+                final User user = new User(username,password,null,User.PTC,User.STATUS_UNKNOWN);
                 TypedArray colors = getResources().obtainTypedArray(R.array.circleColors);
                 Random r = new Random();
 
@@ -196,9 +202,18 @@ public class MultiboxingActivity extends AppCompatActivity implements
                 realm.beginTransaction();
                 realm.copyToRealmOrUpdate(user);
                 realm.commitTransaction();
+                final PokemonGo[] go = new PokemonGo[1];
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        go[0] = new LoginPTC(MultiboxingActivity.instance).getPokemongo(user);
+                        PokemonGoWithUsername goWithUsername = new PokemonGoWithUsername(user.getUsername(), go[0]);
+                        MultiAccountLoader.cachedGo.add(goWithUsername);
+                    }
+                }).start();
 
-                AuthSingleAccountLoader singleloader = new AuthSingleAccountLoader(user);
-                singleloader.start();
+                //AuthSingleAccountLoader singleloader = new AuthSingleAccountLoader(user);
+                //singleloader.start();
 
                 builder.dismiss();
             }

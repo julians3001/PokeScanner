@@ -102,7 +102,7 @@ public class SettingsUtil {
         );
         return new Settings(
             sharedPrefs.getBoolean(ENABLE_UPDATES,true),
-            sharedPrefs.getBoolean(KEY_BOUNDING_BOX, false),
+            sharedPrefs.getBoolean(KEY_BOUNDING_BOX, true),
             sharedPrefs.getBoolean(DRIVING_MODE, false),
             sharedPrefs.getBoolean(FORCE_ENGLISH_NAMES,false),
             sharedPrefs.getBoolean(ENABLE_LOW_MEMORY,true),
@@ -111,11 +111,11 @@ public class SettingsUtil {
             sharedPrefs.getInt(POKEMON_ICON_SCALE, 2),
             sharedPrefs.getInt(MAP_REFRESH_RATE, 2),
             sharedPrefs.getString(LAST_USERNAME, ""),
-            sharedPrefs.getBoolean(SHOW_ONLY_LURED, false),
+            sharedPrefs.getBoolean(SHOW_ONLY_LURED, true),
             sharedPrefs.getBoolean(SHOW_GYMS, true),
             sharedPrefs.getBoolean(SHOW_POKESTOPS, true),
-            sharedPrefs.getBoolean(KEY_OLD_MARKER, false),
-            sharedPrefs.getBoolean(SHUFFLE_ICONS, true),
+            sharedPrefs.getBoolean(KEY_OLD_MARKER, true),
+            sharedPrefs.getBoolean(SHUFFLE_ICONS, false),
             sharedPrefs.getBoolean(SHOW_LURED_POKEMON, false)
         );
     }

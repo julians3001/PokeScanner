@@ -26,6 +26,7 @@ import android.webkit.WebViewClient;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
@@ -115,130 +116,7 @@ public class ObjectLoaderPTC extends Thread {
     @Override
     public void run() {
         try {
-
-
-            CredentialProvider provider = null;
-
-            final boolean[] successfulllogin = {false};
-            if (MultiAccountLoader.cachedGo[position] == null) {
-                OkHttpClient client = new OkHttpClient();
-                //Create our provider and set it to null
-                MultiAccountLoader.cachedGo[position] = new PokemonGo(client);
-                loginListener = new LoginListener() {
-                    @Override
-                    public void onLogin(PokemonGo api) {
-                        System.out.println("Successfully logged in with SolveCaptchaExample! " + user.getUsername());
-                        successfulllogin[0] = true;
-                    }
-
-                    @Override
-                    public void onChallenge(PokemonGo api, String challengeURL) {
-                        System.out.println("Captcha received " + user.getUsername() + "! URL: " + challengeURL);
-                        url = challengeURL;
-                        MapsActivity.instance.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                AlertDialog.Builder alert = new AlertDialog.Builder(MapsActivity.instance);
-
-                                alert.setTitle("Captcha " + user.getUsername());
-
-                                WebView wv = new WebView(MapsActivity.instance.getApplicationContext());
-                                wv.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                                wv.getSettings().setJavaScriptEnabled(true);
-                                wv.loadUrl(url);
-                                wv.setWebViewClient(new WebViewClient() {
-                                    @Override
-                                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
-
-                                        if (url.startsWith("unity:")) {
-                                            // magic
-                                            String token = url.toString().split(Pattern.quote(":"))[1];
-                                            System.out.println(token);
-                                            try {
-                                                if (MultiAccountLoader.cachedGo[position].verifyChallenge(token)) {
-                                                    System.out.println("Captcha was correctly solved!");
-                                                    captchaSolved = true;
-                                                } else {
-                                                    System.out.println("Captcha was incorrectly solved! Please try again.");
-                                            /*
-                                                Ask for a new challenge url, don't need to check the result,
-                                                because the LoginListener will be called when this completed.
-                                            */
-                                                    //MultiAccountLoader.cachedGo[position].checkChallenge();
-                                                }
-                                            } catch (RemoteServerException e) {
-                                                e.printStackTrace();
-                                            } catch (CaptchaActiveException e) {
-                                                e.printStackTrace();
-                                            } catch (LoginFailedException e) {
-                                                e.printStackTrace();
-                                            } catch (InvalidProtocolBufferException e) {
-                                                e.printStackTrace();
-                                            } catch (HashException e) {
-                                                e.printStackTrace();
-                                            }
-                                            return true;
-                                        } else {
-                                            view.loadUrl(url);
-
-                                            return true;
-                                        }
-                                    }
-
-                                });
-
-                                alert.setView(wv);
-                                alert.setNegativeButton("Close", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int id) {
-                                        dialog.dismiss();
-                                    }
-                                });
-                                alert.show();
-                            }
-                        });
-
-                        //Todo solve captcha: api.verifyChallenge(token)
-                        //completeCaptcha(api, challengeURL);
-                    }
-                };
-                MultiAccountLoader.cachedGo[position].addListener(loginListener);
-                //Is our user google or PTC?
-                if (user.getAuthType() == User.GOOGLE) {
-                    if (user.getToken() != null) {
-                        provider = new GoogleUserCredentialProvider(client, user.getToken().getRefreshToken());
-                    } else {
-                        EventBus.getDefault().post(new ForceLogoutEvent());
-                    }
-                } else {
-                    provider = new PtcCredentialProvider(client, user.getUsername(), user.getPassword());
-                }
-
-                if (provider != null) {
-                    HashProvider hasher = AuthAccountsLoader.getHashProvider();
-
-                    MultiAccountLoader.cachedGo[position].login(provider, hasher);
-
-                } else {
-                    this.run();
-                    return;
-                }
-
-                while (!successfulllogin[0]) {
-
-                }
-            }
-            boolean test = MultiAccountLoader.cachedGo[position].hasChallenge();
-            while (test) {
-                Thread.sleep(5000);
-                if (captchaSolved) {
-                    HashProvider hasher = AuthAccountsLoader.getHashProvider();
-                    MultiAccountLoader.cachedGo[position].login(provider, hasher);
-                }
-                test = MultiAccountLoader.cachedGo[position].hasChallenge();
-
-            }
-            go = MultiAccountLoader.cachedGo[position];
+            go = MultiAccountLoader.cachedGo.get(position).api;
             if (go == null) {
                 return;
             }
@@ -248,9 +126,16 @@ public class ObjectLoaderPTC extends Thread {
 
             if (go != null) {
                 System.out.println("Erfolgreich eingeloggt: " + user.getUsername());
-                //MultiAccountLoader.cachedGo[position].removeListener(loginListener);
+                //MultiAccountLoader.cachedGo.get(position).removeListener(loginListener);
                 for (int i = 0; i < scanMap.size(); i++) {
+                    final Circle[] oldCircle = {null};
                     final LatLng pos = scanMap.get(i);
+                    MapsActivity.instance.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            oldCircle[0] = MapsActivity.instance.createInitialCircle(pos);
+                        }
+                    });
                     if (i == 0) {
                         go.setLocation(pos.latitude, pos.longitude, Math.random() * 15.0);
                         go.getMap().awaitUpdate();
@@ -286,23 +171,14 @@ public class ObjectLoaderPTC extends Thread {
 
                     System.out.println(user.getUsername() + " is banned: " + isBanned);
                     if(isBanned){
-                        OkHttpClient client = new OkHttpClient();
-                        //Create our provider and set it to null
-                        MultiAccountLoader.cachedGo[position] = new PokemonGo(client);
-                        go = MultiAccountLoader.cachedGo[position];
-                        Thread.sleep(1000);
-                        HashProvider hasher = AuthAccountsLoader.getHashProvider();
-                        provider = new PtcCredentialProvider(client, user.getUsername(), user.getPassword());
-                        go.login(provider, hasher);
-                        i--;
-                        continue;
+
                     }
 
 
                     MapsActivity.instance.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            MapsActivity.instance.createCircle(new ScanCircleEvent(pos, isBanned, user.getUsername(), user.getAccountColor()));
+                            MapsActivity.instance.createCircle(pos,oldCircle[0],user);
                         }
                     });
                     final ArrayList<EncounterResult> encounterResults = new ArrayList<>();
@@ -435,27 +311,12 @@ public class ObjectLoaderPTC extends Thread {
 
             e.printStackTrace();
             System.out.println("InterruptedException: " + user.getUsername());
-        } catch (RemoteServerException e) {
-
-            e.printStackTrace();
-            System.out.println("RemoteServerException: " + user.getUsername());
-            this.run();
-        } catch (LoginFailedException e) {
-
-            e.printStackTrace();
-            System.out.println("LoginFailedException: " + user.getUsername());
-            this.run();
         } catch (AsyncPokemonGoException e) {
 
             e.printStackTrace();
-            MultiAccountLoader.cachedGo[position] = null;
 
             System.out.println("AsyncPokemonGo: " + user.getUsername());
             this.run();
-        } catch (HashException e) {
-            e.printStackTrace();
-        } catch (CaptchaActiveException e) {
-            e.printStackTrace();
         }
     }
 

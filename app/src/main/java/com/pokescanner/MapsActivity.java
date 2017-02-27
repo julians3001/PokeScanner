@@ -370,7 +370,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
                     //Set our map
                     MultiAccountLoader.setScanMap(scanMap);
-                    MultiAccountLoader.cachedGo = new PokemonGo[40];
+                    //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
@@ -445,7 +445,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setSleepTime(UiUtils.BASE_DELAY * SERVER_REFRESH_RATE);
                     //Set our map
                     MultiAccountLoader.setScanMap(scanMap);
-                    MultiAccountLoader.cachedGo = new PokemonGo[40];
+                    //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
@@ -552,7 +552,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
                     boolean createNewLogin = false;
-                    for(int i = 0 ; i<Math.min(scanMap.size(),users.size());i++){
+                    /*for(int i = 0 ; i<Math.min(scanMap.size(),users.size());i++){
                         if(MultiAccountLoader.cachedGo[i]==null){
                             createNewLogin = true;
                         } else if(MultiAccountLoader.cachedGo[i].hasChallenge()){
@@ -562,7 +562,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     if(createNewLogin){
                         MultiAccountLoader.cachedGo = new PokemonGo[40];
                         System.out.println("Created new Logins");
-                    }
+                    }*/
                     //Set Context
                     MultiAccountLoader.setContext(this);
                     //Begin our threads???
@@ -807,6 +807,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             circleArray.clear();
         }
+        removeBoundingBox();
     }
 
     public boolean shouldGymBeRemoved(Gym gym) {
@@ -874,9 +875,24 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     float tempOldProgress;
     int iprogressBar = 1;
+
+
+    @TargetApi(Build.VERSION_CODES.M)
+    public Circle createInitialCircle(LatLng pos){
+        CircleOptions circleOptions = new CircleOptions()
+                .radius(80)
+                .strokeWidth(0)
+                .fillColor(adjustAlpha(getColor(R.color.YellowCircle), 0.5f))
+                .center(pos);
+        Circle circle = mMap.addCircle(circleOptions);
+        circleArray.add(circle);
+        return circle;
+    }
+
     //@Subscribe(threadMode = ThreadMode.MAIN)
-    public synchronized void createCircle(ScanCircleEvent event) {
-        if (event.pos != null) {
+    @TargetApi(Build.VERSION_CODES.M)
+    public synchronized void createCircle(LatLng pos, Circle oldCircle, User user) {
+        if (pos != null) {
 
             //SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
             //int iprogressBar = mPrefs.getInt("progressbar", 1);
@@ -891,8 +907,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             CircleOptions circleOptions = new CircleOptions()
                     .radius(80)
                     .strokeWidth(0)
-                    .fillColor(adjustAlpha(event.color, 0.5f))
-                    .center(event.pos);
+                    .fillColor(adjustAlpha(getColor(R.color.GreenCircle), 0.5f))
+                    .center(pos);
+            oldCircle.remove();
             circleArray.add(mMap.addCircle(circleOptions));
             if (progress >= 100) {
                 removeCircleArray();
@@ -974,7 +991,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (pokemonsMarkerMap != null)
             pokemonsMarkerMap.clear();
         if (mMap != null)
-            mMap.clear();
+            //mMap.clear();
         forceRefreshEvent(new ForceRefreshEvent());
         onRestartRefreshEvent(new RestartRefreshEvent());
         realm = Realm.getDefaultInstance();

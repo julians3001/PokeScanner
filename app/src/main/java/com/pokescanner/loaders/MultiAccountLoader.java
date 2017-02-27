@@ -12,6 +12,7 @@ import com.pokescanner.helper.MyPartition;
 import com.pokescanner.objects.User;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -26,7 +27,7 @@ public class MultiAccountLoader {
     static public GoogleApiClient mGoogleApiClient;
     static public Context context;
     static public boolean autoScan = false;
-    static public PokemonGo[] cachedGo = new PokemonGo[40];
+    static public ArrayList<PokemonGoWithUsername> cachedGo;
     static public boolean SCANNING_STATUS = false;
     static public ServiceConnection mConnection;
     static public boolean cancelThreads = false;

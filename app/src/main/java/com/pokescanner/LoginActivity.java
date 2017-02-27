@@ -2,6 +2,7 @@ package com.pokescanner;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -13,9 +14,16 @@ import android.widget.Toast;
 
 import com.crashlytics.android.answers.Answers;
 import com.crashlytics.android.answers.LoginEvent;
+import com.pokegoapi.api.PokemonGo;
+import com.pokegoapi.exceptions.CaptchaActiveException;
+import com.pokegoapi.exceptions.LoginFailedException;
+import com.pokegoapi.exceptions.RemoteServerException;
 import com.pokescanner.events.AuthLoadedEvent;
 import com.pokescanner.loaders.AuthPTCLoader;
 import com.pokescanner.loaders.AuthTokenLoader;
+import com.pokescanner.loaders.LoginPTC;
+import com.pokescanner.loaders.MultiAccountLoader;
+import com.pokescanner.loaders.PokemonGoWithUsername;
 import com.pokescanner.objects.User;
 import com.pokescanner.utils.UiUtils;
 
@@ -23,6 +31,9 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.util.ArrayList;
+
+import POGOProtos.Networking.Envelopes.RequestEnvelopeOuterClass;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
@@ -34,11 +45,12 @@ public class LoginActivity extends AppCompatActivity {
     @BindView(R.id.etUsername) EditText etUsername;
     @BindView(R.id.etPassword) EditText etPassword;
     @BindView(R.id.tvCheckServer) TextView tvCheckServer;
-
+    @BindView(R.id.tvTitle) TextView tvTitle;
     @BindView(R.id.Container) LinearLayout Container;
     @BindView(R.id.progressBar) ProgressBar progressBar;
 
     String username, password;
+    public static LoginActivity instance;
 
     Realm realm;
     int LOGIN_METHOD = -1;
@@ -46,6 +58,7 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        instance = this;
         setContentView(R.layout.activity_login);
         ButterKnife.bind(this);
 
@@ -60,14 +73,51 @@ public class LoginActivity extends AppCompatActivity {
 
     public void checkIfUserIsLoggedIn() {
         if (realm.where(User.class).findAll().size() != 0) {
-            //Get our first user
-            User user = realm.where(User.class).findFirst();
-            if (user.getAuthType() == User.PTC) {
-                //Lets enter his information
-                username = user.getUsername();
-                password = user.getPassword();
+            //Get our users
+            ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
+            final ArrayList<Thread> threads = new ArrayList<>();
+            MultiAccountLoader.cachedGo = new ArrayList<>();
+            for(final User elem : users){
+                boolean alreadyLoggedIn=false;
+                for(PokemonGoWithUsername apis : MultiAccountLoader.cachedGo){
+                    if(elem.getUsername().equals(apis.username)){
+                        alreadyLoggedIn = true;
+                    }
+                }
+                if(alreadyLoggedIn){
+                    continue;
+                }
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        PokemonGo go = new LoginPTC(LoginActivity.instance).getPokemongo(elem);
+                        PokemonGoWithUsername goUser = new PokemonGoWithUsername(elem.getUsername(),go);
+                        MultiAccountLoader.cachedGo.add(goUser);
+                    }
+                });
+                threads.add(thread);
+                thread.start();
             }
-            startMapIntent();
+            showProgressbar(true);
+            AsyncTask asyncTask = new AsyncTask<Void, Void, Void>() {
+
+                @Override
+                protected void onPostExecute(Void aVoid) {
+                    startMapIntent();
+                }
+
+                @Override
+                protected Void doInBackground(Void... voids) {
+                    for(Thread thread: threads){
+                        try {
+                            thread.join();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    return null;
+                }
+            }.execute();
         }
     }
 
@@ -183,9 +233,11 @@ public class LoginActivity extends AppCompatActivity {
     public void showProgressbar(boolean status) {
         if (status) {
             progressBar.setVisibility(View.VISIBLE);
+            tvTitle.setText(R.string.loggingIn);
             Container.setVisibility(View.GONE);
         } else {
             progressBar.setVisibility(View.GONE);
+            tvTitle.setText(R.string.poke_scanner);
             Container.setVisibility(View.VISIBLE);
         }
     }
