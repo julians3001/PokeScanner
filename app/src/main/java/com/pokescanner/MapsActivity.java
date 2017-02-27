@@ -497,6 +497,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             stopPokeScan();
             SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
             SharedPreferences.Editor prefsEditor = mPrefs.edit();
+            iprogressBar = 1;
             prefsEditor.putInt("progressbar", 1);
             prefsEditor.commit();
             scanCurrentPosition = false;
@@ -504,6 +505,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         } else {
             SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
             SharedPreferences.Editor prefsEditor = mPrefs.edit();
+            iprogressBar = 1;
             prefsEditor.putInt("progressbar", 1);
             prefsEditor.commit();
             //Progress Bar Related Stuff
@@ -550,7 +552,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
                     boolean createNewLogin = false;
-                    for(int i = 0 ; i<scanMap.size();i++){
+                    for(int i = 0 ; i<Math.min(scanMap.size(),users.size());i++){
                         if(MultiAccountLoader.cachedGo[i]==null){
                             createNewLogin = true;
                         } else if(MultiAccountLoader.cachedGo[i].hasChallenge()){
@@ -559,6 +561,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
                     if(createNewLogin){
                         MultiAccountLoader.cachedGo = new PokemonGo[40];
+                        System.out.println("Created new Logins");
                     }
                     //Set Context
                     MultiAccountLoader.setContext(this);
@@ -639,9 +642,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     //Map related Functions
     public void refreshMap() {
 
-        if (!MultiAccountLoader.areThreadsRunning() && !MultiAccountLoader.autoScan) {
+        /*if (!MultiAccountLoader.areThreadsRunning() && !MultiAccountLoader.autoScan) {
             showProgressbar(false);
-        }
+        }*/
 
         if (CENTER_ALWAYS) {
             moveCameraToCurrentPosition(true);
@@ -870,33 +873,36 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     float tempOldProgress;
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void createCircle(ScanCircleEvent event) {
+    int iprogressBar = 1;
+    //@Subscribe(threadMode = ThreadMode.MAIN)
+    public synchronized void createCircle(ScanCircleEvent event) {
         if (event.pos != null) {
 
-            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
-            int iprogressBar = mPrefs.getInt("progressbar", 1);
+            //SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+            //int iprogressBar = mPrefs.getInt("progressbar", 1);
 
             /*if(event.isBanned){
                 showToast(event.username +" maybe banned");
             }*/
 
             float progress = (float) iprogressBar * 100 / scanMap.size();
+            System.out.println("progress: "+progress);
             progressBar.setProgress((int) progress);
-            if (progress < tempOldProgress) {
-                removeCircleArray();
-                showProgressbar(false);
-            } else {
-                showProgressbar(true);
-            }
             CircleOptions circleOptions = new CircleOptions()
                     .radius(80)
                     .strokeWidth(0)
                     .fillColor(adjustAlpha(event.color, 0.5f))
                     .center(event.pos);
             circleArray.add(mMap.addCircle(circleOptions));
+            if (progress >= 100) {
+                removeCircleArray();
+                showProgressbar(false);
+            } else {
+                showProgressbar(true);
+            }
+
             tempOldProgress = progress;
+            iprogressBar++;
 
         }
     }

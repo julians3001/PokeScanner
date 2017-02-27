@@ -38,6 +38,7 @@ import com.pokegoapi.api.PokemonGo;
 import com.pokegoapi.api.listener.LoginListener;
 import com.pokegoapi.api.map.Map;
 import com.pokegoapi.api.map.MapObjects;
+import com.pokegoapi.api.map.Point;
 import com.pokegoapi.api.map.fort.Pokestop;
 import com.pokegoapi.api.map.pokemon.CatchablePokemon;
 import com.pokegoapi.api.map.pokemon.encounter.EncounterResult;
@@ -52,6 +53,7 @@ import com.pokegoapi.exceptions.RemoteServerException;
 import com.pokegoapi.exceptions.hash.HashException;
 import com.pokegoapi.util.CaptchaSolveHelper;
 import com.pokegoapi.util.hash.HashProvider;
+import com.pokegoapi.util.path.Path;
 import com.pokescanner.MapsActivity;
 import com.pokescanner.R;
 import com.pokescanner.events.ForceLogoutEvent;
@@ -125,21 +127,23 @@ public class ObjectLoaderPTC extends Thread {
                 loginListener = new LoginListener() {
                     @Override
                     public void onLogin(PokemonGo api) {
-                        System.out.println("Successfully logged in with SolveCaptchaExample! "+user.getUsername());
+                        System.out.println("Successfully logged in with SolveCaptchaExample! " + user.getUsername());
                         successfulllogin[0] = true;
                     }
 
                     @Override
                     public void onChallenge(PokemonGo api, String challengeURL) {
-                        System.out.println("Captcha received "+user.getUsername()+"! URL: " + challengeURL);
+                        System.out.println("Captcha received " + user.getUsername() + "! URL: " + challengeURL);
                         url = challengeURL;
                         MapsActivity.instance.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 AlertDialog.Builder alert = new AlertDialog.Builder(MapsActivity.instance);
-                                alert.setTitle("Captcha "+user.getUsername());
+
+                                alert.setTitle("Captcha " + user.getUsername());
 
                                 WebView wv = new WebView(MapsActivity.instance.getApplicationContext());
+                                wv.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                                 wv.getSettings().setJavaScriptEnabled(true);
                                 wv.loadUrl(url);
                                 wv.setWebViewClient(new WebViewClient() {
@@ -215,16 +219,19 @@ public class ObjectLoaderPTC extends Thread {
 
                     MultiAccountLoader.cachedGo[position].login(provider, hasher);
 
+                } else {
+                    this.run();
+                    return;
                 }
 
-                while (!successfulllogin[0]){
+                while (!successfulllogin[0]) {
 
                 }
             }
             boolean test = MultiAccountLoader.cachedGo[position].hasChallenge();
-            while(test){
+            while (test) {
                 Thread.sleep(5000);
-                if(captchaSolved){
+                if (captchaSolved) {
                     HashProvider hasher = AuthAccountsLoader.getHashProvider();
                     MultiAccountLoader.cachedGo[position].login(provider, hasher);
                 }
@@ -241,25 +248,67 @@ public class ObjectLoaderPTC extends Thread {
 
             if (go != null) {
                 System.out.println("Erfolgreich eingeloggt: " + user.getUsername());
-                MultiAccountLoader.cachedGo[position].removeListener(loginListener);
-                for (LatLng pos : scanMap) {
-                    go.setLocation(pos.latitude,pos.longitude,Math.random() * 15.0);
-                    go.getMap().awaitUpdate();
-                    if(MultiAccountLoader.cancelThreads){
+                //MultiAccountLoader.cachedGo[position].removeListener(loginListener);
+                for (int i = 0; i < scanMap.size(); i++) {
+                    final LatLng pos = scanMap.get(i);
+                    if (i == 0) {
+                        go.setLocation(pos.latitude, pos.longitude, Math.random() * 15.0);
+                        go.getMap().awaitUpdate();
+                    } else {
+                        Point destination = new Point(scanMap.get(i).latitude, scanMap.get(i).longitude);
+                        Path path = new Path(go.getPoint(), destination, 20.0);
+                        System.out.println("Start traveling to destination, catching pokemon.");
+                        path.start(go);
+                        try {
+                            while (!path.isComplete()) {
+                                //Calculate the desired intermediate point for the current time
+                                Point point = path.calculateIntermediate(go);
+                                //Set the API location to that point
+                                go.setLatitude(point.getLatitude());
+                                go.setLongitude(point.getLongitude());
+                                //Sleep for 2 seconds before setting the location again
+                                Thread.sleep(2000);
+                            }
+                        } catch (InterruptedException e) {
+                            break;
+                        }
+                        System.out.println("Finished traveling to destination, catching pokemon.");
+                        go.getMap().awaitUpdate();
+                    }
+                    if (MultiAccountLoader.cancelThreads) {
                         return;
                     }
-                    final Collection<CatchablePokemon> catchablePokemon = go.getMap().getMapObjects().getPokemon();;
+                    final Collection<CatchablePokemon> catchablePokemon = go.getMap().getMapObjects().getPokemon();
 
                     final ArrayList<com.pokegoapi.api.gym.Gym> collectionGyms = new ArrayList<>(go.getMap().getMapObjects().getGyms());
                     final Collection<Pokestop> collectionPokeStops = go.getMap().getMapObjects().getPokestops();
-                    boolean isBanned = go.getMap().getMapObjects().getNearby().size() <= 0;
-                    System.out.println(user.getUsername() + " is banned: "+isBanned);
+                    final boolean isBanned = go.getMap().getMapObjects().getNearby().size() <= 0;
 
-                    EventBus.getDefault().post(new ScanCircleEvent(pos, isBanned,user.getUsername(), user.getAccountColor()));
+                    System.out.println(user.getUsername() + " is banned: " + isBanned);
+                    if(isBanned){
+                        OkHttpClient client = new OkHttpClient();
+                        //Create our provider and set it to null
+                        MultiAccountLoader.cachedGo[position] = new PokemonGo(client);
+                        go = MultiAccountLoader.cachedGo[position];
+                        Thread.sleep(1000);
+                        HashProvider hasher = AuthAccountsLoader.getHashProvider();
+                        provider = new PtcCredentialProvider(client, user.getUsername(), user.getPassword());
+                        go.login(provider, hasher);
+                        i--;
+                        continue;
+                    }
+
+
+                    MapsActivity.instance.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            MapsActivity.instance.createCircle(new ScanCircleEvent(pos, isBanned, user.getUsername(), user.getAccountColor()));
+                        }
+                    });
                     final ArrayList<EncounterResult> encounterResults = new ArrayList<>();
                     //long starttime = System.currentTimeMillis();
-                    for(final CatchablePokemon pokemonOut : catchablePokemon){
-                        if(MultiAccountLoader.cancelThreads){
+                    /*for (final CatchablePokemon pokemonOut : catchablePokemon) {
+                        if (MultiAccountLoader.cancelThreads) {
                             return;
                         }
                         EncounterResult encResult = null;
@@ -280,7 +329,7 @@ public class ObjectLoaderPTC extends Thread {
                             }
                         });
 
-                    }
+                    }*/
 
                     realm = Realm.getDefaultInstance();
                     //System.out.println("Realm start: "+user.getUsername());
@@ -288,28 +337,28 @@ public class ObjectLoaderPTC extends Thread {
                         @Override
                         public void execute(Realm realm) {
                             for (CatchablePokemon pokemonOut : catchablePokemon) {
-                                if(MultiAccountLoader.cancelThreads){
+                                if (MultiAccountLoader.cancelThreads) {
                                     return;
                                 }
 
 
-                                Pokemon pokemonEncounter = new Pokemon(go, encounterResults.get(0).getPokemonData());
-                                encounterResults.remove(0);
+                                //Pokemon pokemonEncounter = new Pokemon(go, encounterResults.get(0).getPokemonData());
+                                //encounterResults.remove(0);
                                 long currentTime = System.currentTimeMillis();
                                 Pokemons pokemon = new Pokemons(pokemonOut);
 
 
-                                pokemon.setIvInPercentage(pokemonEncounter.getIvInPercentage());
-                                pokemon.setIndividualAttack(pokemonEncounter.getIndividualAttack());
-                                pokemon.setIndividualDefense(pokemonEncounter.getIndividualDefense());
-                                pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
+                                //pokemon.setIvInPercentage(pokemonEncounter.getIvInPercentage());
+                                //pokemon.setIndividualAttack(pokemonEncounter.getIndividualAttack());
+                                //pokemon.setIndividualDefense(pokemonEncounter.getIndividualDefense());
+                                //pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
                                 pokemon.setFoundTime(currentTime);
                                 ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
                                 boolean alreadyNotificated = false;
 
                                 if (pokemon.getExpires() < 0) {
 
-                                   // pokemon.setExpires(currentTime + 900000);
+                                    // pokemon.setExpires(currentTime + 900000);
 
                                     for (Pokemons allPokemon : pokelist) {
                                         if (allPokemon.getEncounterid() == pokemon.getEncounterid()) {
@@ -349,7 +398,7 @@ public class ObjectLoaderPTC extends Thread {
                                                     .setVibrate(new long[]{100, 100})
                                                     .setContentIntent(pIntent)
                                                     .setAutoCancel(true)
-                                                    .setContentText(pokemon.getFormalName(context) + " (" + pokemon.getIvInPercentage() + "%) (" + DrawableUtils.getExpireTime(pokemon.getExpires(),pokemon.getFoundTime()) + ")");
+                                                    .setContentText(pokemon.getFormalName(context) + " (" + pokemon.getIvInPercentage() + "%) (" + DrawableUtils.getExpireTime(pokemon.getExpires(), pokemon.getFoundTime()) + ")");
                                     Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                                     mBuilder.setSound(alarmSound);
                                     NotificationManager mNotificationManager =
@@ -378,21 +427,26 @@ public class ObjectLoaderPTC extends Thread {
                     sendPokemonListToWear();
 
                     realm.close();
-                    Thread.sleep(SLEEP_TIME);
+                    //Thread.sleep(SLEEP_TIME);
                 }
+
             }
         } catch (InterruptedException e) {
+
             e.printStackTrace();
             System.out.println("InterruptedException: " + user.getUsername());
         } catch (RemoteServerException e) {
+
             e.printStackTrace();
             System.out.println("RemoteServerException: " + user.getUsername());
             this.run();
         } catch (LoginFailedException e) {
+
             e.printStackTrace();
             System.out.println("LoginFailedException: " + user.getUsername());
             this.run();
         } catch (AsyncPokemonGoException e) {
+
             e.printStackTrace();
             MultiAccountLoader.cachedGo[position] = null;
 
