@@ -11,6 +11,7 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.pokescanner.helper.PokemonListLoader;
+import com.pokescanner.loaders.LoginPTC;
 import com.pokescanner.objects.NotificationItem;
 import com.pokescanner.recycler.NotificationRecyclerAdapter;
 
@@ -156,6 +157,7 @@ public class PokemonNotificationActivity extends AppCompatActivity implements Te
 
     @Override
     protected void onResume() {
+        LoginPTC.currentActivity = this;
         realm = Realm.getDefaultInstance();
         super.onResume();
     }

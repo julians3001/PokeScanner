@@ -11,6 +11,7 @@ import android.content.IntentSender;
 import android.content.res.TypedArray;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -64,7 +65,6 @@ import butterknife.OnLongClick;
 import io.realm.Realm;
 import io.realm.RealmChangeListener;
 import io.realm.RealmConfiguration;
-
 
 
 public class MultiboxingActivity extends AppCompatActivity implements
@@ -137,7 +137,7 @@ public class MultiboxingActivity extends AppCompatActivity implements
     }
 
 
-    private void loadAccounts(){
+    private void loadAccounts() {
         userList.clear();
         userList.addAll(realm.copyFromRealm(realm.where(User.class).findAll()));
         userAdapter.notifyDataSetChanged();
@@ -165,16 +165,21 @@ public class MultiboxingActivity extends AppCompatActivity implements
 
     @Override
     protected void onResume() {
+        LoginPTC.currentActivity = this;
         super.onResume();
         realm = Realm.getDefaultInstance();
         loadAccounts();
-        refreshAccounts();
+        //refreshAccounts();
     }
 
+    //Shows a toast (Boiler plate stuff)
+    public void showToast(int resString) {
+        Toast.makeText(MultiboxingActivity.this, getString(resString), Toast.LENGTH_SHORT).show();
+    }
 
     @OnClick(R.id.btnAddAccount)
     public void addAccountDialog() {
-        View view = getLayoutInflater().inflate(R.layout.dialog_add_account,null);
+        View view = getLayoutInflater().inflate(R.layout.dialog_add_account, null);
         final AlertDialog builder = new AlertDialog.Builder(this).create();
 
         final TextView etUsername = (TextView) view.findViewById(R.id.etAddUsername);
@@ -191,7 +196,7 @@ public class MultiboxingActivity extends AppCompatActivity implements
                 String password = etPassword.getText().toString();
                 int color = userList.size();
 
-                final User user = new User(username,password,null,User.PTC,User.STATUS_UNKNOWN);
+                final User user = new User(username, password, null, User.PTC, User.STATUS_UNKNOWN);
                 TypedArray colors = getResources().obtainTypedArray(R.array.circleColors);
                 Random r = new Random();
 
@@ -206,11 +211,44 @@ public class MultiboxingActivity extends AppCompatActivity implements
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        go[0] = new LoginPTC(MultiboxingActivity.instance).getPokemongo(user);
-                        PokemonGoWithUsername goWithUsername = new PokemonGoWithUsername(user.getUsername(), go[0]);
-                        MultiAccountLoader.cachedGo.add(goWithUsername);
+
                     }
                 }).start();
+
+                AsyncTask asyncTask = new AsyncTask<Void, Void, Void>() {
+
+                    @Override
+                    protected void onPostExecute(Void aVoid) {
+                        if(user.getStatus()!=User.STATUS_WRONGCREDENTIALS) {
+                            realm.beginTransaction();
+                            realm.copyToRealmOrUpdate(user);
+                            realm.commitTransaction();
+                        }
+                        loadAccounts();
+                    }
+
+                    @Override
+                    protected Void doInBackground(Void... voids) {
+                        go[0] = new LoginPTC().getPokemongo(user);
+                        if (user.getStatus() == User.STATUS_WRONGCREDENTIALS) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    removeAccount(user);
+                                    loadAccounts();
+                                    showToast(R.string.AUTH_FAILED);
+                                    builder.dismiss();
+                                    addAccountDialog();
+                                    loadAccounts();
+                                }
+                            });
+                        } else {
+                            PokemonGoWithUsername goWithUsername = new PokemonGoWithUsername(user.getUsername(), go[0]);
+                            MultiAccountLoader.cachedGo.add(goWithUsername);
+                        }
+                        return null;
+                    }
+                }.execute();
 
                 //AuthSingleAccountLoader singleloader = new AuthSingleAccountLoader(user);
                 //singleloader.start();
@@ -227,13 +265,12 @@ public class MultiboxingActivity extends AppCompatActivity implements
         });
 
 
-
         builder.setView(view);
         builder.show();
     }
 
     @OnLongClick(R.id.btnAddAccount)
-    public boolean addAccountFromFile(){
+    public boolean addAccountFromFile() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("*/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -274,7 +311,7 @@ public class MultiboxingActivity extends AppCompatActivity implements
                             (FilePickerActivity.EXTRA_PATHS);
 
                     if (paths != null) {
-                        for (String path: paths) {
+                        for (String path : paths) {
                             Uri uri = Uri.parse(path);
                             file = new File(uri.getPath());
                         }
@@ -293,7 +330,7 @@ public class MultiboxingActivity extends AppCompatActivity implements
                 e.printStackTrace();
             }
 
-            if(fin == null){
+            if (fin == null) {
 
                 return;
             }
@@ -302,12 +339,12 @@ public class MultiboxingActivity extends AppCompatActivity implements
             int color = userList.size();
 
             try {
-                while ( (receiveString = bufferedReader.readLine()) != null ) {
-                    String [] credentials = receiveString.split(" ");
+                while ((receiveString = bufferedReader.readLine()) != null) {
+                    String[] credentials = receiveString.split(" ");
                     String username = credentials[0];
                     String password = credentials[1];
 
-                    User user = new User(username,password,null,User.PTC,User.STATUS_UNKNOWN);
+                    User user = new User(username, password, null, User.PTC, User.STATUS_UNKNOWN);
 
                     TypedArray colors = getResources().obtainTypedArray(R.array.circleColors);
                     Random r = new Random();
@@ -323,9 +360,47 @@ public class MultiboxingActivity extends AppCompatActivity implements
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
+            for(final User user : users){
+
+                final PokemonGo[] go = new PokemonGo[1];
+                AsyncTask asyncTask = new AsyncTask<Void, Void, Void>() {
+
+                    @Override
+                    protected void onPostExecute(Void aVoid) {
+                        if(user.getStatus()!=User.STATUS_WRONGCREDENTIALS) {
+                            realm.beginTransaction();
+                            realm.copyToRealmOrUpdate(user);
+                            realm.commitTransaction();
+                        }
+                        loadAccounts();
+                    }
+
+                    @Override
+                    protected Void doInBackground(Void... voids) {
+                        go[0] = new LoginPTC().getPokemongo(user);
+                        if (user.getStatus() == User.STATUS_WRONGCREDENTIALS) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    removeAccount(user);
+                                    loadAccounts();
+                                    showToast(R.string.AUTH_FAILED);
+                                    addAccountDialog();
+                                    loadAccounts();
+                                }
+                            });
+                        } else {
+                            PokemonGoWithUsername goWithUsername = new PokemonGoWithUsername(user.getUsername(), go[0]);
+                            MultiAccountLoader.cachedGo.add(goWithUsername);
+                        }
+                        return null;
+                    }
+                }.execute();
+            }
+
         }
     }
-
 
 
     @OnClick(R.id.btnRefresh)

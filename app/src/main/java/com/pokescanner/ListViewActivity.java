@@ -24,6 +24,7 @@ import com.google.android.gms.wearable.Wearable;
 import com.pokescanner.events.ScanCircleEvent;
 import com.pokescanner.helper.PokeDistanceSorter;
 import com.pokescanner.helper.PokemonListLoader;
+import com.pokescanner.loaders.LoginPTC;
 import com.pokescanner.loaders.MultiAccountLoader;
 import com.pokescanner.objects.FilterItem;
 import com.pokescanner.objects.Pokemons;
@@ -340,6 +341,7 @@ public class ListViewActivity extends AppCompatActivity implements GoogleApiClie
 
     @Override
     protected void onResume() {
+        LoginPTC.currentActivity = this;
         super.onResume();
         showProgressbar(false);
         EventBus.getDefault().register(this);

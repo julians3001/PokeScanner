@@ -83,6 +83,7 @@ import com.pokescanner.exceptions.NoMapException;
 import com.pokescanner.helper.Generation;
 import com.pokescanner.helper.GymFilter;
 import com.pokescanner.loaders.MultiAccountLoader;
+import com.pokescanner.loaders.PokemonGoWithUsername;
 import com.pokescanner.objects.Gym;
 import com.pokescanner.objects.PokeStop;
 import com.pokescanner.objects.Pokemons;
@@ -178,6 +179,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     public HeatmapTileProvider mHeatProvider;
 
     String TAG = "wear";
+    public static boolean isInOverlayMode;
 
     boolean CENTER_ALWAYS = false;
 
@@ -338,6 +340,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     public void onResume() {
         mapView.onResume();
         super.onResume();
+        isInOverlayMode = true;
     }
 
     @Override
@@ -544,31 +547,52 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
     }
 
     float tempOldProgress;
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void createCircle(ScanCircleEvent event) {
-        if (event.pos != null)
-        {
-
-            SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(getContext());
-            int iprogressBar = mPrefs.getInt("progressbar",1);
+    int iprogressBar = 1;
 
 
+    @TargetApi(Build.VERSION_CODES.M)
+    public Circle createInitialCircle(LatLng pos){
+        CircleOptions circleOptions = new CircleOptions()
+                .radius(80)
+                .strokeWidth(0)
+                .fillColor(adjustAlpha(getActivity().getColor(R.color.YellowCircle), 0.5f))
+                .center(pos);
+        Circle circle = mMap.addCircle(circleOptions);
+        circleArray.add(circle);
+        return circle;
+    }
+
+    //@Subscribe(threadMode = ThreadMode.MAIN)
+    @TargetApi(Build.VERSION_CODES.M)
+    public synchronized void createCircle(LatLng pos, Circle oldCircle, User user) {
+        if (pos != null) {
+
+            //SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+            //int iprogressBar = mPrefs.getInt("progressbar", 1);
+
+            /*if(event.isBanned){
+                showToast(event.username +" maybe banned");
+            }*/
 
             float progress = (float) iprogressBar * 100 / scanMap.size();
+            System.out.println("progress: "+progress);
             progressBar.setProgress((int) progress);
-            if(progress <tempOldProgress) {
+            CircleOptions circleOptions = new CircleOptions()
+                    .radius(80)
+                    .strokeWidth(0)
+                    .fillColor(adjustAlpha(getActivity().getColor(R.color.GreenCircle), 0.5f))
+                    .center(pos);
+            oldCircle.remove();
+            circleArray.add(mMap.addCircle(circleOptions));
+            if (progress >= 100) {
                 removeCircleArray();
                 showProgressbar(false);
             } else {
                 showProgressbar(true);
             }
-            CircleOptions circleOptions = new CircleOptions()
-                    .radius(80)
-                    .strokeWidth(0)
-                    .fillColor(adjustAlpha(event.color,0.5f))
-                    .center(event.pos);
-            circleArray.add(mMap.addCircle(circleOptions));
+
             tempOldProgress = progress;
+            iprogressBar++;
 
         }
     }
@@ -735,6 +759,22 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     MultiAccountLoader.setScanMap(scanMap);
                     //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
+                    boolean inList = false;
+                    ArrayList<User> usersToRemove = new ArrayList<>();
+                    for(User user : users){
+                        inList = false;
+                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(user.getUsername().equals(elem.username)){
+                                inList = true;
+                            }
+                        }
+                        if(!inList){
+                            usersToRemove.add(user);
+                        }
+                    }
+                    for(User user : usersToRemove){
+                        users.remove(user);
+                    }
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     //MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
@@ -944,6 +984,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(getContext());
             SharedPreferences.Editor prefsEditor = mPrefs.edit();
             prefsEditor.putInt("progressbar",1);
+            iprogressBar = 1;
             prefsEditor.commit();
             scanCurrentPosition = false;
             //StartStopSendToWear(false, 1);
@@ -951,6 +992,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(getContext());
             SharedPreferences.Editor prefsEditor = mPrefs.edit();
             prefsEditor.putInt("progressbar",1);
+            iprogressBar = 1;
             prefsEditor.commit();
             //Progress Bar Related Stuff
             pos = 1;
@@ -992,6 +1034,22 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     //Set our map
                     MultiAccountLoader.setScanMap(scanMap);
                     //Set our users
+                    boolean inList = false;
+                    ArrayList<User> usersToRemove = new ArrayList<>();
+                    for(User user : users){
+                        inList = false;
+                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(user.getUsername().equals(elem.username)){
+                                inList = true;
+                            }
+                        }
+                        if(!inList){
+                            usersToRemove.add(user);
+                        }
+                    }
+                    for(User user : usersToRemove){
+                        users.remove(user);
+                    }
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     //MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
@@ -1043,6 +1101,22 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     MultiAccountLoader.setScanMap(scanMap);
                     //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
+                    boolean inList = false;
+                    ArrayList<User> usersToRemove = new ArrayList<>();
+                    for(User user : users){
+                        inList = false;
+                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(user.getUsername().equals(elem.username)){
+                                inList = true;
+                            }
+                        }
+                        if(!inList){
+                            usersToRemove.add(user);
+                        }
+                    }
+                    for(User user : usersToRemove){
+                        users.remove(user);
+                    }
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     //Set Context

@@ -91,7 +91,9 @@ import com.pokescanner.exceptions.NoMapException;
 import com.pokescanner.helper.Generation;
 import com.pokescanner.helper.GymFilter;
 import com.pokescanner.helper.PokemonListLoader;
+import com.pokescanner.loaders.LoginPTC;
 import com.pokescanner.loaders.MultiAccountLoader;
+import com.pokescanner.loaders.PokemonGoWithUsername;
 import com.pokescanner.objects.FilterItem;
 import com.pokescanner.objects.Gym;
 import com.pokescanner.objects.PokeStop;
@@ -372,6 +374,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setScanMap(scanMap);
                     //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
+                    boolean inList = false;
+                    ArrayList<User> usersToRemove = new ArrayList<>();
+                    for(User user : users){
+                        inList = false;
+                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(user.getUsername().equals(elem.username)){
+                                inList = true;
+                            }
+                        }
+                        if(!inList){
+                            usersToRemove.add(user);
+                        }
+                    }
+                    for(User user : usersToRemove){
+                        users.remove(user);
+                    }
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
@@ -447,6 +465,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setScanMap(scanMap);
                     //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
+                    boolean inList = false;
+                    ArrayList<User> usersToRemove = new ArrayList<>();
+                    for(User user : users){
+                        inList = false;
+                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(user.getUsername().equals(elem.username)){
+                                inList = true;
+                            }
+                        }
+                        if(!inList){
+                            usersToRemove.add(user);
+                        }
+                    }
+                    for(User user : usersToRemove){
+                        users.remove(user);
+                    }
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
@@ -548,6 +582,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //Set our map
                     MultiAccountLoader.setScanMap(scanMap);
                     //Set our users
+                    boolean inList = false;
+                    ArrayList<User> usersToRemove = new ArrayList<>();
+                    for(User user : users){
+                        inList = false;
+                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(user.getUsername().equals(elem.username)){
+                                inList = true;
+                            }
+                        }
+                        if(!inList){
+                            usersToRemove.add(user);
+                        }
+                    }
+                    for(User user : usersToRemove){
+                        users.remove(user);
+                    }
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
@@ -913,6 +963,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             circleArray.add(mMap.addCircle(circleOptions));
             if (progress >= 100) {
                 removeCircleArray();
+                iprogressBar = 1;
                 showProgressbar(false);
             } else {
                 showProgressbar(true);
@@ -972,6 +1023,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onResume() {
         super.onResume();
+        LoginPTC.currentActivity = this;
+        SomeFragment.isInOverlayMode = false;
         MultiAccountLoader.mConnection = new ServiceConnection() {
 
             @Override
@@ -1358,7 +1411,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 final DilatingDotsProgressBar heatProgress = (DilatingDotsProgressBar) dialoglayoutHeatMap.findViewById(R.id.heatProgress);
                 final Button heatProgressOverlay = (Button) dialoglayoutHeatMap.findViewById(R.id.heatProgressOverlay);
                 final RadioGroup radioGroup = (RadioGroup) dialoglayoutHeatMap.findViewById(R.id.radioGroupHeat);
-                final int[] numberOfPokemons = new int[152];
+                final int[] numberOfPokemons = new int[252];
 
                 heatProgressOverlay.setVisibility(View.VISIBLE);
                 heatProgress.setVisibility(View.VISIBLE);

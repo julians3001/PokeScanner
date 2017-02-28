@@ -65,6 +65,7 @@ import com.pokescanner.objects.Gym;
 import com.pokescanner.objects.PokeStop;
 import com.pokescanner.objects.Pokemons;
 import com.pokescanner.objects.User;
+import com.pokescanner.service.SomeFragment;
 import com.pokescanner.utils.DrawableUtils;
 import com.pokescanner.utils.UiUtils;
 
@@ -133,7 +134,11 @@ public class ObjectLoaderPTC extends Thread {
                     MapsActivity.instance.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            oldCircle[0] = MapsActivity.instance.createInitialCircle(pos);
+                            if (SomeFragment.isInOverlayMode) {
+                                oldCircle[0] = SomeFragment.someFragment.createInitialCircle(pos);
+                            } else {
+                                oldCircle[0] = MapsActivity.instance.createInitialCircle(pos);
+                            }
                         }
                     });
                     if (i == 0) {
@@ -170,7 +175,7 @@ public class ObjectLoaderPTC extends Thread {
                     final boolean isBanned = go.getMap().getMapObjects().getNearby().size() <= 0;
 
                     System.out.println(user.getUsername() + " is banned: " + isBanned);
-                    if(isBanned){
+                    if (isBanned) {
 
                     }
 
@@ -178,7 +183,11 @@ public class ObjectLoaderPTC extends Thread {
                     MapsActivity.instance.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            MapsActivity.instance.createCircle(pos,oldCircle[0],user);
+                            if (SomeFragment.isInOverlayMode) {
+                                SomeFragment.someFragment.createCircle(pos, oldCircle[0], user);
+                            } else {
+                                MapsActivity.instance.createCircle(pos, oldCircle[0], user);
+                            }
                         }
                     });
                     final ArrayList<EncounterResult> encounterResults = new ArrayList<>();
@@ -234,7 +243,7 @@ public class ObjectLoaderPTC extends Thread {
 
                                 if (pokemon.getExpires() < 0) {
 
-                                    // pokemon.setExpires(currentTime + 900000);
+                                    pokemon.setExpires(currentTime + 900000);
 
                                     for (Pokemons allPokemon : pokelist) {
                                         if (allPokemon.getEncounterid() == pokemon.getEncounterid()) {

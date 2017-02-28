@@ -29,6 +29,8 @@ import com.pokescanner.utils.PermissionUtils;
 import com.pokescanner.utils.UiUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import io.fabric.sdk.android.services.concurrency.Priority;
@@ -82,13 +84,19 @@ public class AutoScanService extends Service{
         new Thread(new Runnable() {
             @Override
             public void run() {
+                boolean even = false;
                 while(MultiAccountLoader.autoScan){
-
+                    even = !even;
                     if(incomingIntent.getIntExtra("mode",-1)==0) {
                         LatLng scanPosition = getCurrentLocation();
                         int scanValue = Settings.get(getApplicationContext()).getScanValue();
                         if (scanPosition != null) {
+
                             scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
+                            //if(!even){
+                              //  Collections.reverse(scanMap);
+                            //}
+                            MultiAccountLoader.even = even;
                             if (scanMap != null) {
                                 MultiAccountLoader.setScanMap(scanMap);
                                 MultiAccountLoader.startThreads();

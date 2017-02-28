@@ -74,9 +74,8 @@ public class LoginActivity extends AppCompatActivity {
     public void checkIfUserIsLoggedIn() {
         if (realm.where(User.class).findAll().size() != 0) {
             //Get our users
-            ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
+            final ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
             final ArrayList<Thread> threads = new ArrayList<>();
-            MultiAccountLoader.cachedGo = new ArrayList<>();
             for(final User elem : users){
                 boolean alreadyLoggedIn=false;
                 for(PokemonGoWithUsername apis : MultiAccountLoader.cachedGo){
@@ -90,9 +89,13 @@ public class LoginActivity extends AppCompatActivity {
                 Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        PokemonGo go = new LoginPTC(LoginActivity.instance).getPokemongo(elem);
-                        PokemonGoWithUsername goUser = new PokemonGoWithUsername(elem.getUsername(),go);
-                        MultiAccountLoader.cachedGo.add(goUser);
+                        PokemonGo go = new LoginPTC().getPokemongo(elem);
+                        if (elem.getStatus() == User.STATUS_WRONGCREDENTIALS) {
+
+                        } else {
+                            PokemonGoWithUsername goUser = new PokemonGoWithUsername(elem.getUsername(),go);
+                            MultiAccountLoader.cachedGo.add(goUser);
+                        }
                     }
                 });
                 threads.add(thread);
@@ -103,6 +106,16 @@ public class LoginActivity extends AppCompatActivity {
 
                 @Override
                 protected void onPostExecute(Void aVoid) {
+                    realm.beginTransaction();
+                    for(User user : users){
+                        if(user.getStatus()==User.STATUS_WRONGCREDENTIALS){
+                            realm.where(User.class).equalTo("username", user.getUsername())
+                                    .findAll().deleteAllFromRealm();
+                        } else {
+                            realm.copyToRealmOrUpdate(user);
+                        }
+                    }
+                    realm.commitTransaction();
                     startMapIntent();
                 }
 
@@ -152,8 +165,9 @@ public class LoginActivity extends AppCompatActivity {
                         user.setAccountColor(R.color.colorPrimary);
                         realm.copyToRealmOrUpdate(user);
                         loginLog();
-                        showToast(R.string.LOGIN_OK);
-                        startMapIntent();
+                        //showToast(R.string.LOGIN_OK);
+                        //startMapIntent();
+                        checkIfUserIsLoggedIn();
 
                     }
                 });
@@ -249,6 +263,7 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        LoginPTC.currentActivity = this;
         checkIfUserIsLoggedIn();
     }
 

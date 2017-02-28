@@ -22,6 +22,7 @@ public class User extends RealmObject{
     static public final int STATUS_UNKNOWN  = 10;
     static public final int STATUS_INVALID  = 11;
     static public final int STATUS_VALID  = 12;
+    static public final int STATUS_WRONGCREDENTIALS = 13;
 
     @PrimaryKey
     String username;

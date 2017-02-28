@@ -12,6 +12,7 @@ import com.pokescanner.helper.MyPartition;
 import com.pokescanner.objects.User;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -27,10 +28,11 @@ public class MultiAccountLoader {
     static public GoogleApiClient mGoogleApiClient;
     static public Context context;
     static public boolean autoScan = false;
-    static public ArrayList<PokemonGoWithUsername> cachedGo;
+    static public ArrayList<PokemonGoWithUsername> cachedGo = new ArrayList<>();
     static public boolean SCANNING_STATUS = false;
     static public ServiceConnection mConnection;
     static public boolean cancelThreads = false;
+    static public boolean even = true;
 
     static public void startThreads() {
         scanMaps = new ArrayList<>();
@@ -49,6 +51,9 @@ public class MultiAccountLoader {
 
         for (int i = 0; i < scanMaps.size(); i++) {
             List<LatLng> tempMap = scanMaps.get(i);
+            if(!even){
+                Collections.reverse(tempMap);
+            }
             User tempUser = users.get(i);
             threads.add(new ObjectLoaderPTC(tempUser, tempMap, SLEEP_TIME, i, mGoogleApiClient, context));
         }

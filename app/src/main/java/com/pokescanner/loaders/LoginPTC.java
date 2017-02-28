@@ -19,7 +19,7 @@ import com.pokegoapi.exceptions.LoginFailedException;
 import com.pokegoapi.exceptions.RemoteServerException;
 import com.pokegoapi.exceptions.hash.HashException;
 import com.pokegoapi.util.hash.HashProvider;
-import com.pokescanner.LoginActivity;
+import com.pokescanner.R;
 import com.pokescanner.events.ForceLogoutEvent;
 import com.pokescanner.objects.User;
 
@@ -37,11 +37,12 @@ public class LoginPTC {
     private LoginListener loginListener;
     private String url;
     private boolean captchaSolved = true;
-    private Activity currentActivity;
+    public static Activity currentActivity;
+    private HashProvider hasher;
+    private DialogInterface.OnClickListener negativeButton;
+    private boolean webViewOpen=false;
+    private AlertDialog alertD;
 
-    public LoginPTC(Activity currentActivity){
-        this.currentActivity = currentActivity;
-    }
 
     public PokemonGo getPokemongo(final User user) {
         CredentialProvider provider = null;
@@ -63,7 +64,8 @@ public class LoginPTC {
                     currentActivity.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            AlertDialog.Builder alert = new AlertDialog.Builder(currentActivity);
+
+                            final AlertDialog.Builder alert = new AlertDialog.Builder(currentActivity);
 
                             alert.setTitle("Captcha " + user.getUsername());
 
@@ -83,6 +85,9 @@ public class LoginPTC {
                                         try {
                                             if (result.verifyChallenge(token)) {
                                                 System.out.println("Captcha was correctly solved!");
+                                                alertD.cancel();
+
+                                                webViewOpen = false;
                                                 captchaSolved = true;
                                             } else {
                                                 System.out.println("Captcha was incorrectly solved! Please try again.");
@@ -114,13 +119,15 @@ public class LoginPTC {
                             });
 
                             alert.setView(wv);
-                            alert.setNegativeButton("Close", new DialogInterface.OnClickListener() {
+                            negativeButton = new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int id) {
                                     dialog.dismiss();
-                                }
-                            });
-                            alert.show();
+                                    webViewOpen = false;
+                                }};
+                            alert.setNegativeButton(R.string.cancel,negativeButton);
+                            alertD =  alert.show();
+                            webViewOpen = true;
                         }
                     });
                 }
@@ -137,7 +144,7 @@ public class LoginPTC {
             }
 
             if (provider != null) {
-                HashProvider hasher = AuthAccountsLoader.getHashProvider();
+                hasher = AuthAccountsLoader.getHashProvider();
 
                 result.login(provider, hasher);
 
@@ -149,7 +156,9 @@ public class LoginPTC {
         } catch (CaptchaActiveException e) {
             e.printStackTrace();
         } catch (LoginFailedException e) {
+            user.setStatus(User.STATUS_WRONGCREDENTIALS);
             e.printStackTrace();
+            return null;
         }catch (AsyncPokemonGoException e) {
 
             e.printStackTrace();
@@ -159,8 +168,27 @@ public class LoginPTC {
 
             return this.getPokemongo(user);
         }
+        int waitingCounter = 0;
         while(!captchaSolved){
 
+            try {
+            if(waitingCounter==5){
+                if(webViewOpen){
+                    waitingCounter = 0;
+                } else{
+                    return this.getPokemongo(user);
+                }
+            }
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            waitingCounter++;
+        }
+        if(result!=null){
+            if(result.isActive()){
+                user.setStatus(User.STATUS_VALID);
+            }
         }
         return result;
     }

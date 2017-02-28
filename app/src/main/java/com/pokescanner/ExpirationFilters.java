@@ -49,6 +49,8 @@ public class ExpirationFilters
         dialog.show();
     }
 
+
+
     public static ExpirationFilter getFilter(Context context)
     {
         SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.shared_key), Context.MODE_PRIVATE);

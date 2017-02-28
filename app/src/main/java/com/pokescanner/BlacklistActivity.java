@@ -11,6 +11,7 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.pokescanner.helper.PokemonListLoader;
+import com.pokescanner.loaders.LoginPTC;
 import com.pokescanner.objects.FilterItem;
 import com.pokescanner.recycler.BlacklistRecyclerAdapter;
 
@@ -156,6 +157,7 @@ public class BlacklistActivity extends AppCompatActivity implements TextWatcher 
 
     @Override
     protected void onResume() {
+        LoginPTC.currentActivity = this;
         realm = Realm.getDefaultInstance();
         super.onResume();
     }

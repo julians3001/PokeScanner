@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 
 import com.pokescanner.R;
+import com.pokescanner.loaders.LoginPTC;
 import com.pokescanner.service.OverlayService;
 import com.pokescanner.service.SomeFragment;
 
@@ -15,6 +16,7 @@ public class OverlayMapsActivity extends FragmentActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        LoginPTC.currentActivity = this;
         setContentView(R.layout.overlay_activity_maps);
 
         // Check that the activity is using the layout version with

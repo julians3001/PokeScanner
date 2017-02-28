@@ -33,6 +33,7 @@ import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.wearable.Wearable;
 import com.pokescanner.events.ScanCircleEvent;
 import com.pokescanner.helper.Generation;
+import com.pokescanner.loaders.LoginPTC;
 import com.pokescanner.loaders.MultiAccountLoader;
 import com.pokescanner.objects.Pokemons;
 import com.pokescanner.objects.User;
@@ -375,6 +376,7 @@ public class DrivingModeActivity extends AppCompatActivity implements GoogleApiC
 
     @Override
     protected void onResume() {
+        LoginPTC.currentActivity = this;
         super.onResume();
         showProgressbar(false);
         EventBus.getDefault().register(this);

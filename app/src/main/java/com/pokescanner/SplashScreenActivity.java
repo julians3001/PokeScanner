@@ -25,6 +25,7 @@ import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.pokescanner.events.AppUpdateEvent;
+import com.pokescanner.loaders.LoginPTC;
 import com.pokescanner.settings.Settings;
 import com.pokescanner.updater.AppUpdate;
 import com.pokescanner.updater.AppUpdateDialog;
@@ -85,6 +86,7 @@ public class SplashScreenActivity extends AppCompatActivity {
         //Move this to on resume allows the user to close the window
         //and for this to still work if he returns
         super.onResume();
+        LoginPTC.currentActivity = this;
         //Start the progress indicator
         splashProgress.show();
         loadVersionNumber();
