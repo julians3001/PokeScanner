@@ -90,7 +90,7 @@ public class MarkerDetails
                         @Override
                         public void call(Long aLong) {
                             String expires = DrawableUtils.getExpireTime(selectedPokemon.getExpires(), selectedPokemon.getFoundTime());
-                            pokemonTimer.setText(expires);
+                            //pokemonTimer.setText(expires);
                         }
                     });
         }

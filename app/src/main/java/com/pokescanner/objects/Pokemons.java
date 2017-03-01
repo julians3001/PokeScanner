@@ -33,7 +33,6 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = false,exclude = {"distance","Name","Number","expires"})
 public class Pokemons  extends RealmObject{
     int Number;
-    @Index
     String Name;
     @PrimaryKey
     long encounterid;
@@ -91,7 +90,7 @@ public class Pokemons  extends RealmObject{
         //set our location
         LatLng position = new LatLng(getLatitude(), getLongitude());
 
-        Bitmap out = DrawableUtils.getBitmapFromView(resourceID,timeOut,context,DrawableUtils.PokemonType);
+        Bitmap out = DrawableUtils.getBitmapFromView(resourceID,"",context,DrawableUtils.PokemonType);
 
         MarkerOptions pokeIcon = new MarkerOptions()
                 .icon(BitmapDescriptorFactory.fromBitmap(out))
@@ -119,7 +118,7 @@ public class Pokemons  extends RealmObject{
 
         String expires = DrawableUtils.getExpireTime(getExpires(),getFoundTime());
 
-        Bitmap newbit = DrawableUtils.getBitmapFromView(getResourceID(context),expires,context,DrawableUtils.PokemonType);
+        Bitmap newbit = DrawableUtils.getBitmapFromView(getResourceID(context),"",context,DrawableUtils.PokemonType);
 
         try{
 

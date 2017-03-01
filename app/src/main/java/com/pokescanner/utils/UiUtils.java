@@ -18,6 +18,8 @@ import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.util.ArrayList;
+
 import io.realm.Realm;
 
 import static com.pokescanner.helper.Generation.hexagonal_number;
@@ -58,7 +60,9 @@ public class UiUtils {
 
     public static boolean isPokemonFiltered(Pokemons pokemons) {
         //lol this is really long but it's simple and to the point
-        return PokemonListLoader.getFilteredList().contains(new FilterItem(pokemons.getNumber()));
+        ArrayList<FilterItem> list = PokemonListLoader.getFilteredList();
+        boolean result = PokemonListLoader.getFilteredList().contains(new FilterItem(pokemons.getNumber()));
+        return result;
     }
 
     public static boolean isPokemonFiltered(int number) {

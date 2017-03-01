@@ -725,6 +725,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //Get our pokemon from the list
                     Pokemons pokemon = pokemons.get(i);
 
+
                     //Is our pokemon contained within the bounds of the camera?
                     if (curScreen.contains(new LatLng(pokemon.getLatitude(), pokemon.getLongitude()))) {
                         //If yes then has he expired?
@@ -752,7 +753,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 } else {
                                     //If our pokemon wasn't in our hashmap lets add him
                                     pokemonsMarkerMap.put(pokemon, mMap.addMarker(pokemon.getMarker(this)));
-                                    System.out.println(pokemon.getFormalName(this) + " added");
+
                                 }
                             }
                         } else {
@@ -941,7 +942,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     //@Subscribe(threadMode = ThreadMode.MAIN)
     @TargetApi(Build.VERSION_CODES.M)
-    public synchronized void createCircle(LatLng pos, Circle oldCircle, User user) {
+    public synchronized void createCircle(LatLng pos, Circle oldCircle, boolean isBanned) {
         if (pos != null) {
 
             //SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -951,13 +952,19 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 showToast(event.username +" maybe banned");
             }*/
 
+            int color;
+            if(!isBanned){
+                color = adjustAlpha(getColor(R.color.GreenCircle), 0.5f);
+            } else {
+                color = adjustAlpha(getColor(R.color.RedCircle), 0.5f);
+            }
             float progress = (float) iprogressBar * 100 / scanMap.size();
             System.out.println("progress: "+progress);
             progressBar.setProgress((int) progress);
             CircleOptions circleOptions = new CircleOptions()
                     .radius(80)
                     .strokeWidth(0)
-                    .fillColor(adjustAlpha(getColor(R.color.GreenCircle), 0.5f))
+                    .fillColor(color)
                     .center(pos);
             oldCircle.remove();
             circleArray.add(mMap.addCircle(circleOptions));

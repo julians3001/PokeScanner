@@ -564,7 +564,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
 
     //@Subscribe(threadMode = ThreadMode.MAIN)
     @TargetApi(Build.VERSION_CODES.M)
-    public synchronized void createCircle(LatLng pos, Circle oldCircle, User user) {
+    public synchronized void createCircle(LatLng pos, Circle oldCircle, boolean isBanned) {
         if (pos != null) {
 
             //SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -573,14 +573,19 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             /*if(event.isBanned){
                 showToast(event.username +" maybe banned");
             }*/
-
+            int color;
+            if(!isBanned){
+                color = adjustAlpha(getActivity().getColor(R.color.GreenCircle), 0.5f);
+            } else {
+               color = adjustAlpha(getActivity().getColor(R.color.RedCircle), 0.5f);
+            }
             float progress = (float) iprogressBar * 100 / scanMap.size();
             System.out.println("progress: "+progress);
             progressBar.setProgress((int) progress);
             CircleOptions circleOptions = new CircleOptions()
                     .radius(80)
                     .strokeWidth(0)
-                    .fillColor(adjustAlpha(getActivity().getColor(R.color.GreenCircle), 0.5f))
+                    .fillColor(color)
                     .center(pos);
             oldCircle.remove();
             circleArray.add(mMap.addCircle(circleOptions));

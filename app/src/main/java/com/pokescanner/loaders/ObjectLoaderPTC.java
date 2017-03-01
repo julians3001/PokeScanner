@@ -143,10 +143,10 @@ public class ObjectLoaderPTC extends Thread {
                     });
                     if (i == 0) {
                         go.setLocation(pos.latitude, pos.longitude, Math.random() * 15.0);
-                        go.getMap().awaitUpdate();
+                        //go.getMap().awaitUpdate();
                     } else {
                         Point destination = new Point(scanMap.get(i).latitude, scanMap.get(i).longitude);
-                        Path path = new Path(go.getPoint(), destination, 20.0);
+                        Path path = new Path(go.getPoint(), destination, 30.0);
                         System.out.println("Start traveling to destination, catching pokemon.");
                         path.start(go);
                         try {
@@ -163,7 +163,7 @@ public class ObjectLoaderPTC extends Thread {
                             break;
                         }
                         System.out.println("Finished traveling to destination, catching pokemon.");
-                        go.getMap().awaitUpdate();
+                        //go.getMap().awaitUpdate();
                     }
                     if (MultiAccountLoader.cancelThreads) {
                         return;
@@ -175,24 +175,21 @@ public class ObjectLoaderPTC extends Thread {
                     final boolean isBanned = go.getMap().getMapObjects().getNearby().size() <= 0;
 
                     System.out.println(user.getUsername() + " is banned: " + isBanned);
-                    if (isBanned) {
-
-                    }
 
 
                     MapsActivity.instance.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             if (SomeFragment.isInOverlayMode) {
-                                SomeFragment.someFragment.createCircle(pos, oldCircle[0], user);
+                                SomeFragment.someFragment.createCircle(pos, oldCircle[0], isBanned);
                             } else {
-                                MapsActivity.instance.createCircle(pos, oldCircle[0], user);
+                                MapsActivity.instance.createCircle(pos, oldCircle[0], isBanned);
                             }
                         }
                     });
                     final ArrayList<EncounterResult> encounterResults = new ArrayList<>();
                     //long starttime = System.currentTimeMillis();
-                    /*for (final CatchablePokemon pokemonOut : catchablePokemon) {
+                    for (final CatchablePokemon pokemonOut : catchablePokemon) {
                         if (MultiAccountLoader.cancelThreads) {
                             return;
                         }
@@ -202,6 +199,10 @@ public class ObjectLoaderPTC extends Thread {
                         } catch (LoginFailedException e) {
                             e.printStackTrace();
                         } catch (RemoteServerException e) {
+                            e.printStackTrace();
+                        } catch (HashException e) {
+                            e.printStackTrace();
+                        } catch (CaptchaActiveException e) {
                             e.printStackTrace();
                         }
                         encounterResults.add(encResult);
@@ -214,55 +215,56 @@ public class ObjectLoaderPTC extends Thread {
                             }
                         });
 
-                    }*/
+                    }
 
                     realm = Realm.getDefaultInstance();
                     //System.out.println("Realm start: "+user.getUsername());
                     realm.executeTransaction(new Realm.Transaction() {
                         @Override
-                        public void execute(Realm realm) {
+                        public void execute(final Realm realm) {
                             for (CatchablePokemon pokemonOut : catchablePokemon) {
                                 if (MultiAccountLoader.cancelThreads) {
                                     return;
                                 }
 
 
-                                //Pokemon pokemonEncounter = new Pokemon(go, encounterResults.get(0).getPokemonData());
-                                //encounterResults.remove(0);
+                                Pokemon pokemonEncounter = new Pokemon(go, encounterResults.get(0).getPokemonData());
+                                encounterResults.remove(0);
                                 long currentTime = System.currentTimeMillis();
-                                Pokemons pokemon = new Pokemons(pokemonOut);
+                                final Pokemons pokemon = new Pokemons(pokemonOut);
 
 
-                                //pokemon.setIvInPercentage(pokemonEncounter.getIvInPercentage());
-                                //pokemon.setIndividualAttack(pokemonEncounter.getIndividualAttack());
-                                //pokemon.setIndividualDefense(pokemonEncounter.getIndividualDefense());
-                                //pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
+                                pokemon.setIvInPercentage(pokemonEncounter.getIvInPercentage());
+                                pokemon.setIndividualAttack(pokemonEncounter.getIndividualAttack());
+                                pokemon.setIndividualDefense(pokemonEncounter.getIndividualDefense());
+                                pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
                                 pokemon.setFoundTime(currentTime);
-                                ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
                                 boolean alreadyNotificated = false;
+                                ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
 
-                                if (pokemon.getExpires() < 0) {
+                                synchronized (MapsActivity.instance){
 
-                                    pokemon.setExpires(currentTime + 900000);
 
-                                    for (Pokemons allPokemon : pokelist) {
-                                        if (allPokemon.getEncounterid() == pokemon.getEncounterid()) {
-                                            alreadyNotificated = true;
-                                            break;
+
+                                    if (pokemon.getExpires() < 0) {
+
+                                        pokemon.setExpires(currentTime + 900000);
+
+                                        for (Pokemons allPokemon : pokelist) {
+                                            if (allPokemon.getEncounterid() == pokemon.getEncounterid()) {
+                                                alreadyNotificated = true;
+                                                break;
+                                            }
                                         }
                                     }
+                                    realm.copyToRealmOrUpdate(pokemon);
                                 }
 
-                                try {
-                                    if (!pokelist.contains(pokemon)) {
-                                        savePokemonToFile(pokemon);
-                                    }
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
 
-                                realm.copyToRealmOrUpdate(pokemon);
-                                if (UiUtils.isPokemonNotification(pokemon) && !pokelist.contains(pokemon) && !alreadyNotificated) {
+
+                                if (UiUtils.isPokemonNotification(pokemon) && !pokelist.contains(pokemon)  && !alreadyNotificated) {
+
+                                    System.out.println(pokemon.getFormalName(MapsActivity.instance)+", "+pokemon.getEncounterid() + " added");
 
 
                                     Intent launchIntent = new Intent(context, MapsActivity.class);
@@ -316,10 +318,6 @@ public class ObjectLoaderPTC extends Thread {
                 }
 
             }
-        } catch (InterruptedException e) {
-
-            e.printStackTrace();
-            System.out.println("InterruptedException: " + user.getUsername());
         } catch (AsyncPokemonGoException e) {
 
             e.printStackTrace();
