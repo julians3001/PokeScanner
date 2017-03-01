@@ -73,6 +73,8 @@ import org.greenrobot.eventbus.EventBus;
 import org.junit.rules.Stopwatch;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -240,10 +242,10 @@ public class ObjectLoaderPTC extends Thread {
                                 pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
                                 pokemon.setFoundTime(currentTime);
                                 boolean alreadyNotificated = false;
-                                ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+                                //ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+                                ArrayList<Pokemons> pokelist = MapsActivity.getPokelist();
 
-                                synchronized (MapsActivity.instance){
-
+                                synchronized (MapsActivity.instance) {
 
 
                                     if (pokemon.getExpires() < 0) {
@@ -257,14 +259,30 @@ public class ObjectLoaderPTC extends Thread {
                                             }
                                         }
                                     }
-                                    realm.copyToRealmOrUpdate(pokemon);
                                 }
+                                if (!pokelist.contains(pokemon)) {
+                                    System.out.println(pokemon.getFormalName(MapsActivity.instance) + ", " + pokemon.getEncounterid() + " added");
+                                    pokelist.add(pokemon);
 
 
+                                    try {
+                                        savePokemonToFile(pokemon);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                } else {
+                                    for (int i = 0; i < pokelist.size(); i++) {
+                                        if (pokelist.get(i).equals(pokemon)) {
+                                            pokelist.remove(pokelist.get(i));
+                                            pokelist.add(pokemon);
+                                            break;
+                                        }
+                                    }
+                                }
+                                MapsActivity.savePokelist(pokelist);
 
-                                if (UiUtils.isPokemonNotification(pokemon) && !pokelist.contains(pokemon)  && !alreadyNotificated) {
 
-                                    System.out.println(pokemon.getFormalName(MapsActivity.instance)+", "+pokemon.getEncounterid() + " added");
+                                if (UiUtils.isPokemonNotification(pokemon) && !pokelist.contains(pokemon) && !alreadyNotificated) {
 
 
                                     Intent launchIntent = new Intent(context, MapsActivity.class);

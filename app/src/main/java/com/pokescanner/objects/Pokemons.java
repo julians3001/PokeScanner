@@ -30,7 +30,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = false,exclude = {"distance","Name","Number","expires"})
+@EqualsAndHashCode(callSuper = false,exclude = {"distance","Name","Number","expires","foundTime"})
 public class Pokemons  extends RealmObject{
     int Number;
     String Name;
@@ -68,6 +68,8 @@ public class Pokemons  extends RealmObject{
 
 
     }
+
+
 
 
 
@@ -122,7 +124,8 @@ public class Pokemons  extends RealmObject{
 
         try{
 
-            marker.setIcon(BitmapDescriptorFactory.fromBitmap(newbit));
+            //marker.setIcon(BitmapDescriptorFactory.fromBitmap(newbit));
+            marker.setSnippet(context.getText(R.string.expires_in)+" " + expires+"\n"+"Attack: "+getIndividualAttack()+"\n"+"Defense: "+getIndividualDefense()+"\n"+"Stamina: "+getIndividualStamina());
         } catch(Exception e){
             e.printStackTrace();
         }

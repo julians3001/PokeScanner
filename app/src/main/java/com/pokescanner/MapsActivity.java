@@ -116,8 +116,14 @@ import org.greenrobot.eventbus.ThreadMode;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -178,6 +184,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public AlertDialog builderHeatMap;
     public ArrayList<LatLng> pokemonPosition;
+    public static String POKEMONFILENAME = "pokemonlist.json";
 
     public ArrayList<MarkerOptions> markerHeatList;
 
@@ -706,8 +713,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 createMapObjects();
 
                 //Load our Pokemon Array
-                ArrayList<Pokemons> pokemons = new ArrayList<Pokemons>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
-
+                //ArrayList<Pokemons> pokemons = new ArrayList<Pokemons>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+                ArrayList<Pokemons> pokemons = MapsActivity.getPokelist();
                 ArrayList<Pokemons> pokemonsCollection = new ArrayList<>(pokemonsMarkerMap.keySet());
 
                 for(int i = 0;i<pokemonsCollection.size();i++){
@@ -829,7 +836,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void createBoundingBox() {
-        if (MultiAccountLoader.SCANNING_STATUS) {
+
             if (scanMap.size() > 0) {
                 removeBoundingBox();
 
@@ -842,7 +849,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 mBoundingHexagon = mMap.addPolygon(polygonOptions);
             }
-        }
     }
 
     public void removeBoundingBox() {
@@ -858,7 +864,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             circleArray.clear();
         }
-        removeBoundingBox();
+        //removeBoundingBox();
     }
 
     public boolean shouldGymBeRemoved(Gym gym) {
@@ -1025,6 +1031,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onForceLogOutEvent(ForceLogoutEvent event) {
         showToast(R.string.ERROR_LOGIN);
         logOut();
+    }
+    public static String convertStreamToString(FileInputStream is) throws Exception {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        StringBuilder sb = new StringBuilder();
+        String line = null;
+        while ((line = reader.readLine()) != null) {
+            sb.append(line).append("\n");
+        }
+        reader.close();
+        return sb.toString();
     }
 
     @Override
@@ -1793,7 +1809,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             realm.executeTransaction(new Realm.Transaction() {
                 @Override
                 public void execute(Realm realm) {
-                    realm.where(Pokemons.class).findAll().deleteAllFromRealm();
+                    savePokelist(new ArrayList<Pokemons>());
 
                     pokemonsMarkerMap = new ArrayMap<Pokemons, Marker>();
 
@@ -1886,7 +1902,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             realm.executeTransaction(new Realm.Transaction() {
                 @Override
                 public void execute(Realm realm) {
-                    realm.where(Pokemons.class).findAll().deleteAllFromRealm();
+                    savePokelist(new ArrayList<Pokemons>());
                     realm.where(Gym.class).findAll().deleteAllFromRealm();
                     realm.where(PokeStop.class).findAll().deleteAllFromRealm();
 
@@ -1961,6 +1977,39 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             }
         });
+    }
+
+    public static ArrayList<Pokemons> getPokelist(){
+        String pokelistjson = "";
+        try {
+            FileInputStream fileInputStream = MapsActivity.instance.openFileInput(MapsActivity.POKEMONFILENAME);
+            pokelistjson = MapsActivity.convertStreamToString(fileInputStream);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        ArrayList<Pokemons> pokelist = (new Gson()).fromJson(pokelistjson, new TypeToken<ArrayList<Pokemons>>() {
+        }.getType());
+        if(pokelist == null){
+            return new ArrayList<>();
+        }
+        return pokelist;
+    }
+
+    public static void savePokelist(ArrayList<Pokemons> pokelist){
+        FileOutputStream fos;
+        try {
+            String string = (new Gson()).toJson(pokelist);
+            fos = MapsActivity.instance.openFileOutput(MapsActivity.POKEMONFILENAME, Context.MODE_PRIVATE);
+
+            fos.write(string.getBytes());
+            fos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void removeAdapterAndListener() {
