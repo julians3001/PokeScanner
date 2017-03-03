@@ -37,7 +37,10 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -78,19 +81,24 @@ import com.google.android.gms.wearable.Wearable;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.pokegoapi.api.PokemonGo;
+import com.pokegoapi.exceptions.CaptchaActiveException;
+import com.pokegoapi.exceptions.LoginFailedException;
+import com.pokegoapi.exceptions.RemoteServerException;
+import com.pokegoapi.exceptions.hash.HashException;
 import com.pokescanner.events.ForceLogoutEvent;
 import com.pokescanner.events.ForceRefreshEvent;
 import com.pokescanner.events.InterruptedExecptionEvent;
 import com.pokescanner.events.LoginFailedExceptionEvent;
 import com.pokescanner.events.RemoteServerExceptionEvent;
 import com.pokescanner.events.RestartRefreshEvent;
-import com.pokescanner.events.ScanCircleEvent;
 import com.pokescanner.exceptions.NoCameraPositionException;
 import com.pokescanner.exceptions.NoMapException;
 import com.pokescanner.helper.Generation;
 import com.pokescanner.helper.GymFilter;
 import com.pokescanner.helper.PokemonListLoader;
+import com.pokescanner.helper.SolveCaptchaHelper;
 import com.pokescanner.loaders.LoginPTC;
 import com.pokescanner.loaders.MultiAccountLoader;
 import com.pokescanner.loaders.PokemonGoWithUsername;
@@ -122,15 +130,16 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -179,6 +188,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     com.github.clans.fab.FloatingActionButton btnCenterCamera;
     @BindView(R.id.btnOverlayActivity)
     ImageButton btnOverlayActivity;
+    @BindView(R.id.tvLoggedInUsers)
+    TextView tvLoggedInUsers;
+    @BindView(R.id.tvTotalAmountOfUser)
+    TextView tvTotalAmountOfUser;
+    @BindView(R.id.btnSolveCaptchas)
+    Button btnSolveCaptchas;
     boolean AutoScan = false;
 
 
@@ -241,6 +256,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     Subscription pokeonRefresher;
     Subscription gymstopRefresher;
     Realm realmDataBase;
+    private PokemonGo result;
+    private java.lang.String url;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -383,18 +400,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //Set our users
                     boolean inList = false;
                     ArrayList<User> usersToRemove = new ArrayList<>();
-                    for(User user : users){
+                    for (User user : users) {
                         inList = false;
-                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
-                            if(user.getUsername().equals(elem.username)){
+                        for (PokemonGoWithUsername elem : MultiAccountLoader.cachedGo) {
+                            if (elem.api.hasChallenge() || elem.banned) {
+                                inList = false;
+                                break;
+                            }
+                            if (user.getUsername().equals(elem.username)) {
                                 inList = true;
                             }
                         }
-                        if(!inList){
+                        if (!inList) {
                             usersToRemove.add(user);
                         }
                     }
-                    for(User user : usersToRemove){
+                    for (User user : usersToRemove) {
                         users.remove(user);
                     }
                     MultiAccountLoader.setUsers(users);
@@ -474,18 +495,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //Set our users
                     boolean inList = false;
                     ArrayList<User> usersToRemove = new ArrayList<>();
-                    for(User user : users){
+                    for (User user : users) {
                         inList = false;
-                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
-                            if(user.getUsername().equals(elem.username)){
+                        for (PokemonGoWithUsername elem : MultiAccountLoader.cachedGo) {
+                            if (elem.api.hasChallenge() || elem.banned) {
+                                inList = false;
+                                break;
+                            }
+                            if (user.getUsername().equals(elem.username)) {
                                 inList = true;
                             }
                         }
-                        if(!inList){
+                        if (!inList) {
                             usersToRemove.add(user);
                         }
                     }
-                    for(User user : usersToRemove){
+                    for (User user : usersToRemove) {
                         users.remove(user);
                     }
                     MultiAccountLoader.setUsers(users);
@@ -591,19 +616,28 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //Set our users
                     boolean inList = false;
                     ArrayList<User> usersToRemove = new ArrayList<>();
-                    for(User user : users){
+                    for (User user : users) {
                         inList = false;
-                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
-                            if(user.getUsername().equals(elem.username)){
+                        for (PokemonGoWithUsername elem : MultiAccountLoader.cachedGo) {
+                            if (elem.api.hasChallenge() || elem.banned) {
+                                inList = false;
+                                break;
+                            }
+                            if (user.getUsername().equals(elem.username)) {
                                 inList = true;
                             }
                         }
-                        if(!inList){
+                        if (!inList) {
                             usersToRemove.add(user);
                         }
                     }
-                    for(User user : usersToRemove){
+                    for (User user : usersToRemove) {
                         users.remove(user);
+                    }
+                    if (users.size() == 0) {
+                        showToast(R.string.SCAN_FAILED);
+                        showProgressbar(false);
+                        return;
                     }
                     MultiAccountLoader.setUsers(users);
                     //Set GoogleWearAPI
@@ -624,6 +658,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     MultiAccountLoader.setContext(this);
                     //Begin our threads???
                     MultiAccountLoader.startThreads();
+                    System.out.println("Threads gestartet");
                     StartStopSendToWear(true, scanMap.size());
                 } else {
                     showToast(R.string.SCAN_FAILED);
@@ -696,12 +731,33 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
+    AlertDialog alertD;
+    boolean webViewOpen;
+    boolean captchaSolved;
+
+    @OnClick(R.id.btnSolveCaptchas)
+    public void solveCaptchas() {
+        Intent intent = new Intent(this,SolveCaptchaActivity.class);
+
+        startActivity(intent);
+
+
+
+    }
+
     //Map related Functions
     public void refreshMap() {
 
         /*if (!MultiAccountLoader.areThreadsRunning() && !MultiAccountLoader.autoScan) {
             showProgressbar(false);
         }*/
+        checkLoggedInUsers();
+        if (MultiAccountLoader.challengeURLs.size() > 0) {
+            btnSolveCaptchas.setVisibility(View.VISIBLE);
+            btnSolveCaptchas.setText("Solve Captchas (" + MultiAccountLoader.challengeURLs.size() + ")");
+        } else {
+            btnSolveCaptchas.setVisibility(View.GONE);
+        }
 
         if (CENTER_ALWAYS) {
             moveCameraToCurrentPosition(true);
@@ -717,8 +773,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 ArrayList<Pokemons> pokemons = MapsActivity.getPokelist();
                 ArrayList<Pokemons> pokemonsCollection = new ArrayList<>(pokemonsMarkerMap.keySet());
 
-                for(int i = 0;i<pokemonsCollection.size();i++){
-                    if(!pokemons.contains(pokemonsCollection.get(i))){
+                for (int i = 0; i < pokemonsCollection.size(); i++) {
+                    if (!pokemons.contains(pokemonsCollection.get(i))) {
                         if (pokemonsMarkerMap.get(pokemonsCollection.get(i)) != null)
                             pokemonsMarkerMap.get(pokemonsCollection.get(i)).remove();
                         pokemonsMarkerMap.remove(pokemonsCollection.get(i));
@@ -786,6 +842,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    private void checkLoggedInUsers() {
+        ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
+        tvTotalAmountOfUser.setText(users.size() + "");
+        int loggedIn = 0;
+        for (int i = 0; i < MultiAccountLoader.cachedGo.size(); i++) {
+            if (MultiAccountLoader.cachedGo.get(i).api.isActive() && !MultiAccountLoader.cachedGo.get(i).api.hasChallenge()) {
+                if (!MultiAccountLoader.cachedGo.get(i).banned) {
+                    loggedIn++;
+                }
+            }
+        }
+        tvLoggedInUsers.setText(loggedIn + "");
+    }
+
     public void refreshGymsAndPokestops() {
         if (!LIST_MODE) {
             //The the map bounds
@@ -837,18 +907,18 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void createBoundingBox() {
 
-            if (scanMap.size() > 0) {
-                removeBoundingBox();
+        if (scanMap.size() > 0) {
+            removeBoundingBox();
 
-                List<LatLng> boundingPoints = Generation.getCorners(scanMap);
-                PolygonOptions polygonOptions = new PolygonOptions();
-                for (LatLng latLng : boundingPoints) {
-                    polygonOptions.add(latLng);
-                }
-                polygonOptions.strokeColor(Color.parseColor("#80d22d2d"));
-
-                mBoundingHexagon = mMap.addPolygon(polygonOptions);
+            List<LatLng> boundingPoints = Generation.getCorners(scanMap);
+            PolygonOptions polygonOptions = new PolygonOptions();
+            for (LatLng latLng : boundingPoints) {
+                polygonOptions.add(latLng);
             }
+            polygonOptions.strokeColor(Color.parseColor("#80d22d2d"));
+
+            mBoundingHexagon = mMap.addPolygon(polygonOptions);
+        }
     }
 
     public void removeBoundingBox() {
@@ -935,7 +1005,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
     @TargetApi(Build.VERSION_CODES.M)
-    public Circle createInitialCircle(LatLng pos){
+    public Circle createInitialCircle(LatLng pos) {
         CircleOptions circleOptions = new CircleOptions()
                 .radius(80)
                 .strokeWidth(0)
@@ -959,13 +1029,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             }*/
 
             int color;
-            if(!isBanned){
+            if (!isBanned) {
                 color = adjustAlpha(getColor(R.color.GreenCircle), 0.5f);
             } else {
                 color = adjustAlpha(getColor(R.color.RedCircle), 0.5f);
             }
             float progress = (float) iprogressBar * 100 / scanMap.size();
-            System.out.println("progress: "+progress);
+            System.out.println("progress: " + progress);
             progressBar.setProgress((int) progress);
             CircleOptions circleOptions = new CircleOptions()
                     .radius(80)
@@ -1032,6 +1102,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         showToast(R.string.ERROR_LOGIN);
         logOut();
     }
+
     public static String convertStreamToString(FileInputStream is) throws Exception {
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         StringBuilder sb = new StringBuilder();
@@ -1068,7 +1139,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             pokemonsMarkerMap.clear();
         if (mMap != null)
             //mMap.clear();
-        forceRefreshEvent(new ForceRefreshEvent());
+            forceRefreshEvent(new ForceRefreshEvent());
         onRestartRefreshEvent(new RestartRefreshEvent());
         realm = Realm.getDefaultInstance();
     }
@@ -1629,7 +1700,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void toggleMapType() {
         if (mMap != null) {
 
-            if(nightMode){
+            if (nightMode) {
                 mMap.setMapStyle(null);
                 nightMode = false;
             } else {
@@ -1744,7 +1815,27 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 return false;
             }
         });
+        loginIntoAccounts();
         startRefresher();
+    }
+
+    public void loginIntoAccounts() {
+        ArrayList<User> users = new ArrayList<>(realm.copyFromRealm(realm.where(User.class).findAll()));
+        for (final User elem : users) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    PokemonGo go;
+                    go = new LoginPTC().getPokemongo(elem);
+                    if (elem.getStatus() == User.STATUS_WRONGCREDENTIALS) {
+
+                    } else {
+                        PokemonGoWithUsername goWithUsername = new PokemonGoWithUsername(elem.getUsername(), go);
+                        MultiAccountLoader.cachedGo.add(goWithUsername);
+                    }
+                }
+            }).start();
+        }
     }
 
     @Override
@@ -1823,12 +1914,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
-    public void cleanPokemon(long encounterid){
+    public void cleanPokemon(long encounterid) {
         final long e = encounterid;
         realm.executeTransaction(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
-                realm.where(Pokemons.class).equalTo("encounterid",e).findAll().deleteAllFromRealm();
+                realm.where(Pokemons.class).equalTo("encounterid", e).findAll().deleteAllFromRealm();
             }
         });
     }
@@ -1979,7 +2070,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         });
     }
 
-    public static ArrayList<Pokemons> getPokelist(){
+    public static ArrayList<Pokemons> getPokelist() {
         String pokelistjson = "";
         try {
             FileInputStream fileInputStream = MapsActivity.instance.openFileInput(MapsActivity.POKEMONFILENAME);
@@ -1991,13 +2082,13 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         ArrayList<Pokemons> pokelist = (new Gson()).fromJson(pokelistjson, new TypeToken<ArrayList<Pokemons>>() {
         }.getType());
-        if(pokelist == null){
+        if (pokelist == null) {
             return new ArrayList<>();
         }
         return pokelist;
     }
 
-    public static void savePokelist(ArrayList<Pokemons> pokelist){
+    public static void savePokelist(ArrayList<Pokemons> pokelist) {
         FileOutputStream fos;
         try {
             String string = (new Gson()).toJson(pokelist);

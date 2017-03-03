@@ -176,6 +176,20 @@ public class ObjectLoaderPTC extends Thread {
                     final Collection<Pokestop> collectionPokeStops = go.getMap().getMapObjects().getPokestops();
                     final boolean isBanned = go.getMap().getMapObjects().getNearby().size() <= 0;
 
+                    if(isBanned){
+                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(elem.username.equals(user.getUsername())){
+                                elem.banned = true;
+                            }
+                        }
+                    } else {
+                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(elem.username.equals(user.getUsername())){
+                                elem.banned = false;
+                                System.out.println("Test "+user.getUsername()+ " "+elem.banned);
+                            }
+                        }
+                    }
                     System.out.println(user.getUsername() + " is banned: " + isBanned);
 
 

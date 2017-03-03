@@ -57,15 +57,15 @@ public class LoginPTC {
                 }
 
                 @Override
-                public void onChallenge(PokemonGo api, String challengeURL) {
+                public void onChallenge(PokemonGo api, final String challengeURL) {
                     System.out.println("Captcha received " + user.getUsername() + "! URL: " + challengeURL);
                     captchaSolved = false;
                     url = challengeURL;
                     currentActivity.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-
-                            final AlertDialog.Builder alert = new AlertDialog.Builder(currentActivity);
+                            MultiAccountLoader.challengeURLs.put(user.getUsername(),challengeURL);
+                            /*final AlertDialog.Builder alert = new AlertDialog.Builder(currentActivity);
 
                             alert.setTitle("Captcha " + user.getUsername());
 
@@ -91,10 +91,7 @@ public class LoginPTC {
                                                 captchaSolved = true;
                                             } else {
                                                 System.out.println("Captcha was incorrectly solved! Please try again.");
-                                            /*
-                                                Ask for a new challenge url, don't need to check the result,
-                                                because the LoginListener will be called when this completed.
-                                            */
+
                                                 //MultiAccountLoader.cachedGo[position].checkChallenge();
                                             }
                                         } catch (RemoteServerException e) {
@@ -127,7 +124,7 @@ public class LoginPTC {
                                 }};
                             alert.setNegativeButton(R.string.cancel,negativeButton);
                             alertD =  alert.show();
-                            webViewOpen = true;
+                            webViewOpen = true;*/
                         }
                     });
                 }
@@ -140,7 +137,11 @@ public class LoginPTC {
                     EventBus.getDefault().post(new ForceLogoutEvent());
                 }
             } else {
-                provider = new PtcCredentialProvider(client, user.getUsername(), user.getPassword());
+                try{
+                    provider = new PtcCredentialProvider(client, user.getUsername(), user.getPassword());
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
             }
 
             if (provider != null) {

@@ -8,6 +8,7 @@ import com.pokegoapi.api.PokemonGo;
 public class PokemonGoWithUsername {
     public final String username;
     public final PokemonGo api;
+    public boolean banned = false;
 
     public PokemonGoWithUsername(String username, PokemonGo api) {
         this.username = username;

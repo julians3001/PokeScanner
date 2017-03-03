@@ -33,6 +33,7 @@ public class MultiAccountLoader {
     static public ServiceConnection mConnection;
     static public boolean cancelThreads = false;
     static public boolean even = true;
+    static public HashMap<String, String> challengeURLs = new HashMap<>();
 
     static public void startThreads() {
         scanMaps = new ArrayList<>();

@@ -667,7 +667,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                 createMapObjects();
 
                 //Load our Pokemon Array
-                ArrayList<Pokemons> pokemons = new ArrayList<Pokemons>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
+                ArrayList<Pokemons> pokemons = MapsActivity.getPokelist();
                 //Okay so we're going to fix the annoying issue where the markers were being constantly redrawn
                 for (int i = 0; i < pokemons.size(); i++) {
                     //Get our pokemon from the list
@@ -769,6 +769,10 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     for(User user : users){
                         inList = false;
                         for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(elem.api.hasChallenge()||elem.banned){
+                                inList = false;
+                                break;
+                            }
                             if(user.getUsername().equals(elem.username)){
                                 inList = true;
                             }
@@ -1044,6 +1048,10 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     for(User user : users){
                         inList = false;
                         for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(elem.api.hasChallenge()||elem.banned){
+                                inList = false;
+                                break;
+                            }
                             if(user.getUsername().equals(elem.username)){
                                 inList = true;
                             }
@@ -1111,6 +1119,10 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     for(User user : users){
                         inList = false;
                         for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                            if(elem.api.hasChallenge()||elem.banned){
+                                inList = false;
+                                break;
+                            }
                             if(user.getUsername().equals(elem.username)){
                                 inList = true;
                             }

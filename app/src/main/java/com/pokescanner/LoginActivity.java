@@ -15,6 +15,7 @@ import android.widget.Toast;
 import com.crashlytics.android.answers.Answers;
 import com.crashlytics.android.answers.LoginEvent;
 import com.pokegoapi.api.PokemonGo;
+import com.pokegoapi.auth.PtcCredentialProvider;
 import com.pokegoapi.exceptions.CaptchaActiveException;
 import com.pokegoapi.exceptions.LoginFailedException;
 import com.pokegoapi.exceptions.RemoteServerException;
@@ -39,6 +40,7 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
+import okhttp3.OkHttpClient;
 
 
 public class LoginActivity extends AppCompatActivity {
@@ -89,13 +91,15 @@ public class LoginActivity extends AppCompatActivity {
                 Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        PokemonGo go = new LoginPTC().getPokemongo(elem);
+
+                        /*PokemonGo go = new LoginPTC().getPokemongo(elem);
                         if (elem.getStatus() == User.STATUS_WRONGCREDENTIALS) {
 
                         } else {
                             PokemonGoWithUsername goUser = new PokemonGoWithUsername(elem.getUsername(),go);
                             MultiAccountLoader.cachedGo.add(goUser);
-                        }
+                        }*/
+
                     }
                 });
                 threads.add(thread);

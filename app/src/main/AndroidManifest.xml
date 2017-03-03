@@ -1,127 +1,138 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.pokescanner">
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.VIBRATE"/>
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
+        android:name="android.support.multidex.MultiDexApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:name="android.support.multidex.MultiDexApplication"
         android:theme="@style/AppTheme">
-
         <service
             android:name=".service.PokeService"
-            android:exported="false"/>
+            android:exported="false" />
 
         <receiver
             android:name=".service.ServerPollReceiver"
-            android:process=":remote" >
+            android:process=":remote">
             <intent-filter>
-                <action android:name="STOP_ACTION"/>
+                <action android:name="STOP_ACTION" />
             </intent-filter>
         </receiver>
 
         <activity
             android:name=".SplashScreenActivity"
-            android:windowSoftInputMode="adjustPan|adjustResize"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan|adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-
-
-        <activity android:name=".LoginActivity"
-            android:windowSoftInputMode="adjustPan|adjustResize"
-            android:screenOrientation="portrait"/>
-
-        <activity android:name=".multiboxing.MultiboxingActivity"
-            android:windowSoftInputMode="adjustPan|adjustResize"
-            android:screenOrientation="portrait"/>
-        <activity android:name=".OverlayMapsActivity"
-            android:windowSoftInputMode="adjustPan|adjustResize"
-            android:screenOrientation="portrait"/>
-
+        <activity
+            android:name=".LoginActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan|adjustResize" />
+        <activity
+            android:name=".multiboxing.MultiboxingActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan|adjustResize" />
+        <activity
+            android:name=".OverlayMapsActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan|adjustResize" />
         <activity
             android:name=".GoogleLoginActivity"
-            android:windowSoftInputMode="adjustPan|adjustResize"
-            android:screenOrientation="portrait"/>
-
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan|adjustResize" />
         <activity
             android:name=".DrivingModeActivity"
-            android:windowSoftInputMode="adjustPan|adjustResize"
-            android:screenOrientation="portrait"/>
-
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan|adjustResize" />
         <activity
             android:name=".ListViewActivity"
-            android:windowSoftInputMode="adjustPan|adjustResize"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan|adjustResize" />
         <activity
             android:name=".BlacklistActivity"
-            android:windowSoftInputMode="adjustPan|adjustResize"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan|adjustResize" />
         <activity
             android:name=".PokemonNotificationActivity"
-            android:windowSoftInputMode="adjustPan|adjustResize"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan|adjustResize" />
         <activity
             android:name=".MapsActivity"
             android:label="@string/title_activity_maps"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait" />
         <activity
             android:name=".settings.SettingsActivity"
-            android:windowSoftInputMode="adjustPan|adjustResize"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustPan|adjustResize" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/GOOGLEAPIKEY" />
-        <meta-data android:name="com.samsung.android.sdk.multiwindow.enable"
-            android:value="true"/>
-
+        <meta-data
+            android:name="com.samsung.android.sdk.multiwindow.enable"
+            android:value="true" />
         <meta-data
             android:name="com.crashlytics.ApiKey"
             android:value="c13e89c059c32c08041932f2d48b4e5bf1054b4a" />
+
         <service android:name=".service.StartScanningListenerService">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
-                <data android:scheme="wear" android:host="*"
-                    android:path="/start_scanning" />
+
+                <data
+                    android:host="*"
+                    android:path="/start_scanning"
+                    android:scheme="wear" />
             </intent-filter>
         </service>
         <service android:name=".service.StartScanningListenerService">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
-                <data android:scheme="wear" android:host="*"
-                    android:path="/start_scanning" />
+
+                <data
+                    android:host="*"
+                    android:path="/start_scanning"
+                    android:scheme="wear" />
             </intent-filter>
         </service>
         <service android:name=".service.StartCleanListenerService">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
-                <data android:scheme="wear" android:host="*"
-                    android:path="/start_cleaning" />
+
+                <data
+                    android:host="*"
+                    android:path="/start_cleaning"
+                    android:scheme="wear" />
             </intent-filter>
         </service>
         <service
             android:name=".service.AutoScanService"
-            android:exported="false"/>
+            android:exported="false" />
         <service
             android:name=".service.OverlayService"
-            android:exported="false"/>
+            android:exported="false" />
+
+        <activity
+            android:name=".SolveCaptchaActivity"
+            android:label="@string/title_activity_solve_captcha"
+            android:theme="@style/AppTheme"></activity>
     </application>
 
 </manifest>

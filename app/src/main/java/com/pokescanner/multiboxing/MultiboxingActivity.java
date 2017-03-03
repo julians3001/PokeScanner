@@ -79,6 +79,8 @@ public class MultiboxingActivity extends AppCompatActivity implements
     private Realm realm;
     public static Activity instance;
     private final static int STORAGE_PERMISSION_REQUESTED = 1300;
+    public static int totalUser;
+    public static int loggedInUser;
 
 
     @Override
