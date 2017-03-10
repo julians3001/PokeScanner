@@ -10,11 +10,14 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.pokegoapi.api.map.pokemon.CatchablePokemon;
 import com.pokescanner.R;
+import com.pokescanner.helper.GoMapPokemon;
 import com.pokescanner.settings.Settings;
 import com.pokescanner.utils.DrawableUtils;
 
 import org.joda.time.DateTime;
 import org.joda.time.Instant;
+
+import java.math.BigDecimal;
 
 import POGOProtos.Map.Pokemon.MapPokemonOuterClass;
 import io.realm.RealmObject;
@@ -69,9 +72,19 @@ public class Pokemons  extends RealmObject{
 
     }
 
-
-
-
+    public Pokemons(GoMapPokemon goMapPokemon) {
+        this.Number = goMapPokemon.pokemon_id;
+        this.encounterid = goMapPokemon.eid;
+        this.expires = goMapPokemon.disappear_time *1000;
+        this.ivInPercentage = round((float) (goMapPokemon.iv * 2.22580645161),2);
+        this.latitude = goMapPokemon.latitude;
+        this.longitude = goMapPokemon.longitude;
+    }
+    public static float round(float d, int decimalPlace) {
+        BigDecimal bd = new BigDecimal(Float.toString(d));
+        bd = bd.setScale(decimalPlace, BigDecimal.ROUND_HALF_UP);
+        return bd.floatValue();
+    }
 
     public int getResourceID(Context context) {
         return DrawableUtils.getResourceID(getNumber(),context);
@@ -99,7 +112,7 @@ public class Pokemons  extends RealmObject{
                 .draggable(true)
                 .position(position);
         if(Settings.get(context).isUseOldMapMarker()){
-            pokeIcon.title(getFormalName(context) +" (" + getIvInPercentage()+"%)");
+            pokeIcon.title(getFormalName(context) +" (" + String.format("%.2f", getIvInPercentage())+"%)");
             pokeIcon.draggable(true);
             pokeIcon.snippet(context.getText(R.string.expires_in)+" " + timeOut+"\n"+"Attack: "+getIndividualAttack()+"\n"+"Defense: "+getIndividualDefense()+"\n"+"Stamina: "+getIndividualStamina());
         }

@@ -71,6 +71,7 @@ public class LoginActivity extends AppCompatActivity {
         Realm.setDefaultConfiguration(realmConfiguration);
 
         realm = Realm.getDefaultInstance();
+        startMapIntent();
     }
 
     public void checkIfUserIsLoggedIn() {
@@ -268,7 +269,7 @@ public class LoginActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         LoginPTC.currentActivity = this;
-        checkIfUserIsLoggedIn();
+        //checkIfUserIsLoggedIn();
     }
 
     @Override

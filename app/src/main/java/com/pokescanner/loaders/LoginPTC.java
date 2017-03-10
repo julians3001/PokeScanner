@@ -65,66 +65,7 @@ public class LoginPTC {
                         @Override
                         public void run() {
                             MultiAccountLoader.challengeURLs.put(user.getUsername(),challengeURL);
-                            /*final AlertDialog.Builder alert = new AlertDialog.Builder(currentActivity);
 
-                            alert.setTitle("Captcha " + user.getUsername());
-
-                            WebView wv = new WebView(currentActivity.getApplicationContext());
-                            wv.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                            wv.getSettings().setJavaScriptEnabled(true);
-                            wv.loadUrl(url);
-                            wv.setWebViewClient(new WebViewClient() {
-                                @Override
-                                public boolean shouldOverrideUrlLoading(WebView view, String url) {
-
-                                    if (url.startsWith("unity:")) {
-                                        // magic
-                                        String token = url.toString().split(Pattern.quote(":"))[1];
-                                        System.out.println(token);
-
-                                        try {
-                                            if (result.verifyChallenge(token)) {
-                                                System.out.println("Captcha was correctly solved!");
-                                                alertD.cancel();
-
-                                                webViewOpen = false;
-                                                captchaSolved = true;
-                                            } else {
-                                                System.out.println("Captcha was incorrectly solved! Please try again.");
-
-                                                //MultiAccountLoader.cachedGo[position].checkChallenge();
-                                            }
-                                        } catch (RemoteServerException e) {
-                                            e.printStackTrace();
-                                        } catch (CaptchaActiveException e) {
-                                            e.printStackTrace();
-                                        } catch (LoginFailedException e) {
-                                            e.printStackTrace();
-                                        } catch (InvalidProtocolBufferException e) {
-                                            e.printStackTrace();
-                                        } catch (HashException e) {
-                                            e.printStackTrace();
-                                        }
-                                        return true;
-                                    } else {
-                                        view.loadUrl(url);
-
-                                        return true;
-                                    }
-                                }
-
-                            });
-
-                            alert.setView(wv);
-                            negativeButton = new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int id) {
-                                    dialog.dismiss();
-                                    webViewOpen = false;
-                                }};
-                            alert.setNegativeButton(R.string.cancel,negativeButton);
-                            alertD =  alert.show();
-                            webViewOpen = true;*/
                         }
                     });
                 }
@@ -152,10 +93,13 @@ public class LoginPTC {
             }
         } catch (HashException e) {
             e.printStackTrace();
+            return result;
         } catch (RemoteServerException e) {
             e.printStackTrace();
+            return result;
         } catch (CaptchaActiveException e) {
             e.printStackTrace();
+            return result;
         } catch (LoginFailedException e) {
             user.setStatus(User.STATUS_WRONGCREDENTIALS);
             e.printStackTrace();
@@ -169,23 +113,8 @@ public class LoginPTC {
 
             return this.getPokemongo(user);
         }
-        int waitingCounter = 0;
-        while(!captchaSolved){
 
-            try {
-            if(waitingCounter==5){
-                if(webViewOpen){
-                    waitingCounter = 0;
-                } else{
-                    return this.getPokemongo(user);
-                }
-            }
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            waitingCounter++;
-        }
+
         if(result!=null){
             if(result.isActive()){
                 user.setStatus(User.STATUS_VALID);

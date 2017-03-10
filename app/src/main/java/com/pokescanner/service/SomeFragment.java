@@ -765,26 +765,29 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
                     boolean inList = false;
-                    ArrayList<User> usersToRemove = new ArrayList<>();
-                    for(User user : users){
-                        inList = false;
-                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
-                            if(elem.api.hasChallenge()||elem.banned){
-                                inList = false;
+                    ArrayList<String> usersToAddString = new ArrayList<>();
+                    ArrayList<User> usersToAdd = new ArrayList<>();
+                    ArrayList<PokemonGoWithUsername> pokemonGoWithUsernames = MultiAccountLoader.cachedGo;
+                    for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                        if(!elem.banned&&!elem.api.hasChallenge()){
+                            usersToAddString.add(elem.username);
+                        }
+                    }
+                    for(int i = 0;i<usersToAddString.size();i++){
+                        for(int j = 0;j<users.size();j++){
+                            if(usersToAddString.get(i).equals(users.get(j).getUsername())){
+                                usersToAdd.add(users.get(j));
                                 break;
                             }
-                            if(user.getUsername().equals(elem.username)){
-                                inList = true;
-                            }
-                        }
-                        if(!inList){
-                            usersToRemove.add(user);
                         }
                     }
-                    for(User user : usersToRemove){
-                        users.remove(user);
+
+                    if (usersToAdd.size() == 0) {
+                        showToast(R.string.SCAN_FAILED);
+                        showProgressbar(false);
+                        return true;
                     }
-                    MultiAccountLoader.setUsers(users);
+                    MultiAccountLoader.setUsers(usersToAdd);
                     //Set GoogleWearAPI
                     //MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
                     //Set Context
@@ -822,7 +825,7 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
             realm.executeTransaction(new Realm.Transaction() {
                 @Override
                 public void execute(Realm realm) {
-                    realm.where(Pokemons.class).findAll().deleteAllFromRealm();
+                    MapsActivity.savePokelist(new ArrayList<Pokemons>());
 
                     pokemonsMarkerMap = new ArrayMap<Pokemons, Marker>();
 
@@ -1044,26 +1047,29 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     MultiAccountLoader.setScanMap(scanMap);
                     //Set our users
                     boolean inList = false;
-                    ArrayList<User> usersToRemove = new ArrayList<>();
-                    for(User user : users){
-                        inList = false;
-                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
-                            if(elem.api.hasChallenge()||elem.banned){
-                                inList = false;
+                    ArrayList<String> usersToAddString = new ArrayList<>();
+                    ArrayList<User> usersToAdd = new ArrayList<>();
+                    ArrayList<PokemonGoWithUsername> pokemonGoWithUsernames = MultiAccountLoader.cachedGo;
+                    for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                        if(!elem.banned&&!elem.api.hasChallenge()){
+                            usersToAddString.add(elem.username);
+                        }
+                    }
+                    for(int i = 0;i<usersToAddString.size();i++){
+                        for(int j = 0;j<users.size();j++){
+                            if(usersToAddString.get(i).equals(users.get(j).getUsername())){
+                                usersToAdd.add(users.get(j));
                                 break;
                             }
-                            if(user.getUsername().equals(elem.username)){
-                                inList = true;
-                            }
-                        }
-                        if(!inList){
-                            usersToRemove.add(user);
                         }
                     }
-                    for(User user : usersToRemove){
-                        users.remove(user);
+
+                    if (usersToAdd.size() == 0) {
+                        showToast(R.string.SCAN_FAILED);
+                        showProgressbar(false);
+                        return;
                     }
-                    MultiAccountLoader.setUsers(users);
+                    MultiAccountLoader.setUsers(usersToAdd);
                     //Set GoogleWearAPI
                     //MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
                     //MultiAccountLoader.cachedGo = new PokemonGo[40];
@@ -1115,26 +1121,29 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
                     boolean inList = false;
-                    ArrayList<User> usersToRemove = new ArrayList<>();
-                    for(User user : users){
-                        inList = false;
-                        for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
-                            if(elem.api.hasChallenge()||elem.banned){
-                                inList = false;
+                    ArrayList<String> usersToAddString = new ArrayList<>();
+                    ArrayList<User> usersToAdd = new ArrayList<>();
+                    ArrayList<PokemonGoWithUsername> pokemonGoWithUsernames = MultiAccountLoader.cachedGo;
+                    for(PokemonGoWithUsername elem : MultiAccountLoader.cachedGo){
+                        if(!elem.banned&&!elem.api.hasChallenge()){
+                            usersToAddString.add(elem.username);
+                        }
+                    }
+                    for(int i = 0;i<usersToAddString.size();i++){
+                        for(int j = 0;j<users.size();j++){
+                            if(usersToAddString.get(i).equals(users.get(j).getUsername())){
+                                usersToAdd.add(users.get(j));
                                 break;
                             }
-                            if(user.getUsername().equals(elem.username)){
-                                inList = true;
-                            }
-                        }
-                        if(!inList){
-                            usersToRemove.add(user);
                         }
                     }
-                    for(User user : usersToRemove){
-                        users.remove(user);
+
+                    if (usersToAdd.size() == 0) {
+                        showToast(R.string.SCAN_FAILED);
+                        showProgressbar(false);
+                        return;
                     }
-                    MultiAccountLoader.setUsers(users);
+                    MultiAccountLoader.setUsers(usersToAdd);
                     //Set GoogleWearAPI
                     //Set Context
                     MultiAccountLoader.setContext(getActivity());

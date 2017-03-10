@@ -148,7 +148,7 @@ public class ObjectLoaderPTC extends Thread {
                         //go.getMap().awaitUpdate();
                     } else {
                         Point destination = new Point(scanMap.get(i).latitude, scanMap.get(i).longitude);
-                        Path path = new Path(go.getPoint(), destination, 30.0);
+                        Path path = new Path(go.getPoint(), destination, 20.0);
                         System.out.println("Start traveling to destination, catching pokemon.");
                         path.start(go);
                         try {
@@ -170,6 +170,7 @@ public class ObjectLoaderPTC extends Thread {
                     if (MultiAccountLoader.cancelThreads) {
                         return;
                     }
+                    go.getMap().awaitUpdate();
                     final Collection<CatchablePokemon> catchablePokemon = go.getMap().getMapObjects().getPokemon();
 
                     final ArrayList<com.pokegoapi.api.gym.Gym> collectionGyms = new ArrayList<>(go.getMap().getMapObjects().getGyms());
@@ -210,8 +211,8 @@ public class ObjectLoaderPTC extends Thread {
                             return;
                         }
                         EncounterResult encResult = null;
-                        try {
-                            encResult = pokemonOut.encounterPokemon();
+                        /*try {
+                            //encResult = pokemonOut.encounterPokemon();
                         } catch (LoginFailedException e) {
                             e.printStackTrace();
                         } catch (RemoteServerException e) {
@@ -220,8 +221,8 @@ public class ObjectLoaderPTC extends Thread {
                             e.printStackTrace();
                         } catch (CaptchaActiveException e) {
                             e.printStackTrace();
-                        }
-                        encounterResults.add(encResult);
+                        }*/
+                        //encounterResults.add(encResult);
 
                         final Pokemons pokemon = new Pokemons(pokemonOut);
                         MapsActivity.instance.runOnUiThread(new Runnable() {
@@ -242,18 +243,25 @@ public class ObjectLoaderPTC extends Thread {
                                 if (MultiAccountLoader.cancelThreads) {
                                     return;
                                 }
-
-
-                                Pokemon pokemonEncounter = new Pokemon(go, encounterResults.get(0).getPokemonData());
-                                encounterResults.remove(0);
+                                Pokemon pokemonEncounter = null;
+                                if(encounterResults.size()>0){
+                                    pokemonEncounter = new Pokemon(go, encounterResults.get(0).getPokemonData());
+                                    encounterResults.remove(0);
+                                }
                                 long currentTime = System.currentTimeMillis();
                                 final Pokemons pokemon = new Pokemons(pokemonOut);
 
-
-                                pokemon.setIvInPercentage(pokemonEncounter.getIvInPercentage());
-                                pokemon.setIndividualAttack(pokemonEncounter.getIndividualAttack());
-                                pokemon.setIndividualDefense(pokemonEncounter.getIndividualDefense());
-                                pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
+                                if(pokemonEncounter!=null) {
+                                    pokemon.setIvInPercentage(pokemonEncounter.getIvInPercentage());
+                                    pokemon.setIndividualAttack(pokemonEncounter.getIndividualAttack());
+                                    pokemon.setIndividualDefense(pokemonEncounter.getIndividualDefense());
+                                    pokemon.setIndividualStamina(pokemonEncounter.getIndividualStamina());
+                                } else {
+                                    pokemon.setIvInPercentage(-1);
+                                    pokemon.setIndividualAttack(-1);
+                                    pokemon.setIndividualDefense(-1);
+                                    pokemon.setIndividualStamina(-1);
+                                }
                                 pokemon.setFoundTime(currentTime);
                                 boolean alreadyNotificated = false;
                                 //ArrayList<Pokemons> pokelist = new ArrayList<>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
@@ -356,6 +364,8 @@ public class ObjectLoaderPTC extends Thread {
 
             System.out.println("AsyncPokemonGo: " + user.getUsername());
             this.run();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 

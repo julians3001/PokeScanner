@@ -68,6 +68,7 @@ dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     //Google Stuff
+
     //RX java Stuff (Should probly be using this)
     compile('io.reactivex:rxandroid:1.2.1') {
         exclude module: 'rxjava'
@@ -78,7 +79,6 @@ dependencies {
     compile('com.crashlytics.sdk.android:crashlytics:2.6.1@aar') {
         transitive = true;
     }
-
     compile 'com.android.support:appcompat-v7:24.1.1'
     compile 'com.google.android.gms:play-services-maps:9.2.1'
     compile 'com.google.android.gms:play-services-location:9.2.1'
@@ -102,4 +102,6 @@ dependencies {
     compile 'com.google.android.gms:play-services-gcm:9.2.1'
     wearApp project(':wear')
     compile 'junit:junit:4.12'
+    compile 'org.kie.modules:org-apache-commons-io-main:6.5.0.Final'
+    compile files('libs/commons-io-2.5.jar')
 }

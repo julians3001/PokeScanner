@@ -19,6 +19,7 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -96,6 +97,8 @@ import com.pokescanner.events.RestartRefreshEvent;
 import com.pokescanner.exceptions.NoCameraPositionException;
 import com.pokescanner.exceptions.NoMapException;
 import com.pokescanner.helper.Generation;
+import com.pokescanner.helper.GoMapPokemon;
+import com.pokescanner.helper.GoMapPokemonList;
 import com.pokescanner.helper.GymFilter;
 import com.pokescanner.helper.PokemonListLoader;
 import com.pokescanner.helper.SolveCaptchaHelper;
@@ -118,19 +121,26 @@ import com.pokescanner.utils.SettingsUtil;
 import com.pokescanner.utils.UiUtils;
 import com.zl.reik.dilatingdotsprogressbar.DilatingDotsProgressBar;
 
+import org.apache.commons.io.IOUtils;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -303,12 +313,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         //So if our realm has no users then we'll send our user back to the login screen
         //otherwise set our user and move on!
-        if (realm.where(User.class).findAll().size() != 0) {
+        /*if (realm.where(User.class).findAll().size() != 0) {
             user = realm.copyFromRealm(realm.where(User.class).findFirst());
         } else {
             Toast.makeText(MapsActivity.this, "No login!", Toast.LENGTH_SHORT).show();
             logOut();
-        }
+        }*/
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -399,26 +409,29 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
                     boolean inList = false;
-                    ArrayList<User> usersToRemove = new ArrayList<>();
-                    for (User user : users) {
-                        inList = false;
-                        for (PokemonGoWithUsername elem : MultiAccountLoader.cachedGo) {
-                            if (elem.api.hasChallenge() || elem.banned) {
-                                inList = false;
+                    ArrayList<String> usersToAddString = new ArrayList<>();
+                    ArrayList<User> usersToAdd = new ArrayList<>();
+                    ArrayList<PokemonGoWithUsername> pokemonGoWithUsernames = MultiAccountLoader.cachedGo;
+                    for (PokemonGoWithUsername elem : MultiAccountLoader.cachedGo) {
+                        if (!elem.banned && !elem.api.hasChallenge()) {
+                            usersToAddString.add(elem.username);
+                        }
+                    }
+                    for (int i = 0; i < usersToAddString.size(); i++) {
+                        for (int j = 0; j < users.size(); j++) {
+                            if (usersToAddString.get(i).equals(users.get(j).getUsername())) {
+                                usersToAdd.add(users.get(j));
                                 break;
                             }
-                            if (user.getUsername().equals(elem.username)) {
-                                inList = true;
-                            }
-                        }
-                        if (!inList) {
-                            usersToRemove.add(user);
                         }
                     }
-                    for (User user : usersToRemove) {
-                        users.remove(user);
+
+                    if (usersToAdd.size() == 0) {
+                        showToast(R.string.SCAN_FAILED);
+                        showProgressbar(false);
+                        return;
                     }
-                    MultiAccountLoader.setUsers(users);
+                    MultiAccountLoader.setUsers(usersToAdd);
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
                     //Set Context
@@ -494,26 +507,29 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //MultiAccountLoader.cachedGo = new PokemonGo[40];
                     //Set our users
                     boolean inList = false;
-                    ArrayList<User> usersToRemove = new ArrayList<>();
-                    for (User user : users) {
-                        inList = false;
-                        for (PokemonGoWithUsername elem : MultiAccountLoader.cachedGo) {
-                            if (elem.api.hasChallenge() || elem.banned) {
-                                inList = false;
+                    ArrayList<String> usersToAddString = new ArrayList<>();
+                    ArrayList<User> usersToAdd = new ArrayList<>();
+                    ArrayList<PokemonGoWithUsername> pokemonGoWithUsernames = MultiAccountLoader.cachedGo;
+                    for (PokemonGoWithUsername elem : MultiAccountLoader.cachedGo) {
+                        if (!elem.banned && !elem.api.hasChallenge()) {
+                            usersToAddString.add(elem.username);
+                        }
+                    }
+                    for (int i = 0; i < usersToAddString.size(); i++) {
+                        for (int j = 0; j < users.size(); j++) {
+                            if (usersToAddString.get(i).equals(users.get(j).getUsername())) {
+                                usersToAdd.add(users.get(j));
                                 break;
                             }
-                            if (user.getUsername().equals(elem.username)) {
-                                inList = true;
-                            }
-                        }
-                        if (!inList) {
-                            usersToRemove.add(user);
                         }
                     }
-                    for (User user : usersToRemove) {
-                        users.remove(user);
+
+                    if (usersToAdd.size() == 0) {
+                        showToast(R.string.SCAN_FAILED);
+                        showProgressbar(false);
+                        return true;
                     }
-                    MultiAccountLoader.setUsers(users);
+                    MultiAccountLoader.setUsers(usersToAdd);
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
                     //Set Context
@@ -602,7 +618,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 scanPosition = getCurrentLocation();
                 scanCurrentPosition = false;
             }
-
+            LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
+            System.out.println("Bounds: " +bounds.northeast.latitude+", "+bounds.northeast.longitude+", "+bounds.southwest.latitude+", "+bounds.southwest.longitude);
 
             if (scanPosition != null) {
                 scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
@@ -614,32 +631,30 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     //Set our map
                     MultiAccountLoader.setScanMap(scanMap);
                     //Set our users
-                    boolean inList = false;
-                    ArrayList<User> usersToRemove = new ArrayList<>();
-                    for (User user : users) {
-                        inList = false;
-                        for (PokemonGoWithUsername elem : MultiAccountLoader.cachedGo) {
-                            if (elem.api.hasChallenge() || elem.banned) {
-                                inList = false;
+                    boolean inList;
+                    ArrayList<String> usersToAddString = new ArrayList<>();
+                    ArrayList<User> usersToAdd = new ArrayList<>();
+                    ArrayList<PokemonGoWithUsername> pokemonGoWithUsernames = MultiAccountLoader.cachedGo;
+                    for (PokemonGoWithUsername elem : MultiAccountLoader.cachedGo) {
+                        if (!elem.banned && !elem.api.hasChallenge()) {
+                            usersToAddString.add(elem.username);
+                        }
+                    }
+                    for (int i = 0; i < usersToAddString.size(); i++) {
+                        for (int j = 0; j < users.size(); j++) {
+                            if (usersToAddString.get(i).equals(users.get(j).getUsername())) {
+                                usersToAdd.add(users.get(j));
                                 break;
                             }
-                            if (user.getUsername().equals(elem.username)) {
-                                inList = true;
-                            }
-                        }
-                        if (!inList) {
-                            usersToRemove.add(user);
                         }
                     }
-                    for (User user : usersToRemove) {
-                        users.remove(user);
-                    }
-                    if (users.size() == 0) {
+
+                    if (usersToAdd.size() == 0) {
                         showToast(R.string.SCAN_FAILED);
                         showProgressbar(false);
                         return;
                     }
-                    MultiAccountLoader.setUsers(users);
+                    MultiAccountLoader.setUsers(usersToAdd);
                     //Set GoogleWearAPI
                     MultiAccountLoader.setmGoogleApiClient(mGoogleWearApiClient);
                     boolean createNewLogin = false;
@@ -737,10 +752,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @OnClick(R.id.btnSolveCaptchas)
     public void solveCaptchas() {
-        Intent intent = new Intent(this,SolveCaptchaActivity.class);
+        Intent intent = new Intent(this, SolveCaptchaActivity.class);
 
         startActivity(intent);
-
 
 
     }
@@ -752,6 +766,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             showProgressbar(false);
         }*/
         checkLoggedInUsers();
+
         if (MultiAccountLoader.challengeURLs.size() > 0) {
             btnSolveCaptchas.setVisibility(View.VISIBLE);
             btnSolveCaptchas.setText("Solve Captchas (" + MultiAccountLoader.challengeURLs.size() + ")");
@@ -765,12 +780,12 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         if (!LIST_MODE) {
             if (mMap != null) {
-                LatLngBounds curScreen = mMap.getProjection().getVisibleRegion().latLngBounds;
+                final LatLngBounds curScreen = mMap.getProjection().getVisibleRegion().latLngBounds;
                 createMapObjects();
 
                 //Load our Pokemon Array
                 //ArrayList<Pokemons> pokemons = new ArrayList<Pokemons>(realm.copyFromRealm(realm.where(Pokemons.class).findAll()));
-                ArrayList<Pokemons> pokemons = MapsActivity.getPokelist();
+                final ArrayList<Pokemons> pokemons = MapsActivity.getPokelist();
                 ArrayList<Pokemons> pokemonsCollection = new ArrayList<>(pokemonsMarkerMap.keySet());
 
                 for (int i = 0; i < pokemonsCollection.size(); i++) {
@@ -783,61 +798,93 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
 
                 //Okay so we're going to fix the annoying issue where the markers were being constantly redrawn
-                for (int i = 0; i < pokemons.size(); i++) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        for (int i = 0; i < pokemons.size(); i++) {
 
-                    //Get our pokemon from the list
-                    Pokemons pokemon = pokemons.get(i);
+                            //Get our pokemon from the list
+                            final Pokemons pokemon = pokemons.get(i);
 
 
-                    //Is our pokemon contained within the bounds of the camera?
-                    if (curScreen.contains(new LatLng(pokemon.getLatitude(), pokemon.getLongitude()))) {
-                        //If yes then has he expired?
-                        //This isnt worded right it should say isNotExpired (Will fix later)
-                        if (pokemon.isNotExpired()) {
-                            if (UiUtils.isPokemonFiltered(pokemon) ||
-                                    UiUtils.isPokemonExpiredFiltered(pokemon, this)) {
-                                if (pokemonsMarkerMap.containsKey(pokemon)) {
-                                    Marker marker = pokemonsMarkerMap.get(pokemon);
-                                    if (marker != null) {
-                                        marker.remove();
-                                        pokemonsMarkerMap.remove(pokemon);
-                                    }
-                                }
-                            } else {
-                                //Okay finally is he contained within our hashmap?
-                                if (pokemonsMarkerMap.containsKey(pokemon)) {
-                                    //Well if he is then lets pull out our marker.
-                                    Marker marker = pokemonsMarkerMap.get(pokemon);
-                                    //Update the marker
-                                    //UNTESTED
-                                    if (marker != null) {
-                                        marker = pokemon.updateMarker(marker, this);
+                            //Is our pokemon contained within the bounds of the camera?
+                            if (curScreen.contains(new LatLng(pokemon.getLatitude(), pokemon.getLongitude()))) {
+                                //If yes then has he expired?
+                                if (pokemon.isNotExpired()) {
+                                    if (UiUtils.isPokemonFiltered(pokemon) ||
+                                            UiUtils.isPokemonExpiredFiltered(pokemon, MapsActivity.instance)) {
+                                        if (pokemonsMarkerMap.containsKey(pokemon)) {
+                                            final Marker marker = pokemonsMarkerMap.get(pokemon);
+                                            if (marker != null) {
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+
+                                                        marker.remove();
+                                                    }
+                                                });
+                                                pokemonsMarkerMap.remove(pokemon);
+                                            }
+                                        }
+                                    } else {
+                                        //Okay finally is he contained within our hashmap?
+                                        if (pokemonsMarkerMap.containsKey(pokemon)) {
+                                            //Well if he is then lets pull out our marker.
+                                            final Marker[] marker = {pokemonsMarkerMap.get(pokemon)};
+                                            //Update the marker
+                                            //UNTESTED
+                                            if (marker[0] != null) {
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+
+                                                        marker[0] = pokemon.updateMarker(marker[0], MapsActivity.instance);
+                                                    }
+                                                });
+                                            }
+                                        } else {
+                                            final MarkerOptions markerOptions = pokemon.getMarker(MapsActivity.instance);
+                                            //If our pokemon wasn't in our hashmap lets add him
+                                            MapsActivity.instance.runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    pokemonsMarkerMap.put(pokemon, mMap.addMarker(markerOptions));
+                                                }
+                                            });
+
+                                        }
                                     }
                                 } else {
-                                    //If our pokemon wasn't in our hashmap lets add him
-                                    pokemonsMarkerMap.put(pokemon, mMap.addMarker(pokemon.getMarker(this)));
+                                    //If our pokemon expired lets remove the marker
 
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            if (pokemonsMarkerMap.get(pokemon) != null)
+                                                pokemonsMarkerMap.get(pokemon).remove();
+                                        }
+                                    });
+                                    //Then remove the pokemon
+                                    pokemonsMarkerMap.remove(pokemon);
+                                    //Finally lets remove him from our realm.
                                 }
+                            } else {
+                                //If our pokemon expired lets remove the marker
+
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (pokemonsMarkerMap.get(pokemon) != null)
+                                            pokemonsMarkerMap.get(pokemon).remove();
+                                    }
+                                });
+                                //Then remove the pokemon
+                                pokemonsMarkerMap.remove(pokemon);
                             }
-                        } else {
-                            //If our pokemon expired lets remove the marker
-                            if (pokemonsMarkerMap.get(pokemon) != null)
-                                pokemonsMarkerMap.get(pokemon).remove();
-                            //Then remove the pokemon
-                            pokemonsMarkerMap.remove(pokemon);
-                            //Finally lets remove him from our realm.
-                            realm.beginTransaction();
-                            realm.where(Pokemons.class).equalTo("encounterid", pokemon.getEncounterid()).findAll().deleteAllFromRealm();
-                            realm.commitTransaction();
                         }
-                    } else {
-                        //If our pokemon expired lets remove the marker
-                        if (pokemonsMarkerMap.get(pokemon) != null)
-                            pokemonsMarkerMap.get(pokemon).remove();
-                        //Then remove the pokemon
-                        pokemonsMarkerMap.remove(pokemon);
                     }
-                }
+                }).start();
+
             }
         }
     }
@@ -851,6 +898,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 if (!MultiAccountLoader.cachedGo.get(i).banned) {
                     loggedIn++;
                 }
+            } else if (MultiAccountLoader.cachedGo.get(i).api.hasChallenge()) {
+                MultiAccountLoader.challengeURLs.put(user.getUsername(), MultiAccountLoader.cachedGo.get(i).api.getChallengeURL());
             }
         }
         tvLoggedInUsers.setText(loggedIn + "");
@@ -981,7 +1030,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             gymstopRefresher.unsubscribe();
 
         //Using RX java we setup an interval to refresh the map
-        pokeonRefresher = Observable.interval(SettingsUtil.getSettings(this).getMapRefresh(), TimeUnit.SECONDS, AndroidSchedulers.mainThread())
+        pokeonRefresher = Observable.interval(20, TimeUnit.SECONDS, AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Long>() {
                     @Override
                     public void call(Long aLong) {
@@ -1726,6 +1775,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     @SuppressWarnings({"MissingPermission"})
     public void onMapReady(GoogleMap googleMap) {
+        getPokemonFromGomap();
         mMap = googleMap;
 
         System.out.println("Map ready");
@@ -1827,12 +1877,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 public void run() {
                     PokemonGo go;
                     go = new LoginPTC().getPokemongo(elem);
-                    if (elem.getStatus() == User.STATUS_WRONGCREDENTIALS) {
 
-                    } else {
-                        PokemonGoWithUsername goWithUsername = new PokemonGoWithUsername(elem.getUsername(), go);
-                        MultiAccountLoader.cachedGo.add(goWithUsername);
-                    }
+                    final PokemonGoWithUsername goWithUsername = new PokemonGoWithUsername(elem.getUsername(), go);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            MultiAccountLoader.cachedGo.add(goWithUsername);
+                            System.out.println("Account added: " + goWithUsername.username);
+                        }
+                    });
+
                 }
             }).start();
         }
@@ -1858,6 +1912,50 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             }
         });
+    }
+
+    public String pokemonGomapString;
+
+    public void getPokemonFromGomap() {
+        ArrayList<Pokemons> pokemonsArrayList = new ArrayList<>();
+
+        final String sUrl = "http://148.251.192.149/m.php?mid=0&ex=%5B14%2C17%2C37%2C52%2C54%2C60%2C69%2C79%2C90%2C100%2C116%2C120%2C124%2C125%2C129%2C133%2C162%2C164%2C190%2C220%2C221%2C223%5D&w=6.482853474751764&e=7.0571951244914&n=51.39983340455366&s=51.040104762186175";
+        AsyncTask asyncTask = new AsyncTask<Void, Void, Void>() {
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                //Todo
+            }
+
+            @Override
+            protected Void doInBackground(Void... voids) {
+                try {
+                    URL url = new URL(sUrl);
+                    HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                    InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+                    BufferedReader r = new BufferedReader(new InputStreamReader(in));
+                    StringBuilder total = new StringBuilder();
+                    String line;
+                    while ((line = r.readLine()) != null) {
+                        total.append(line).append('\n');
+                    }
+                    pokemonGomapString = total.toString();
+                    GoMapPokemonList goMapPokemonList = new Gson().fromJson(pokemonGomapString, GoMapPokemonList.class);
+                    ArrayList<Pokemons> pokemonsArrayList1 = new ArrayList<Pokemons>();
+                    for (GoMapPokemon elem : goMapPokemonList.pokemons) {
+                        Pokemons pokemons = new Pokemons(elem);
+                        pokemons.setName(pokemons.getFormalName(MapsActivity.instance));
+                        pokemonsArrayList1.add(pokemons);
+                    }
+                    savePokelist(pokemonsArrayList1);
+                    System.out.println("Gomap Pokemon Hinzugefügt");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        }.execute();
+
     }
 
     public boolean moveCameraToCurrentPosition(boolean zoom) {
