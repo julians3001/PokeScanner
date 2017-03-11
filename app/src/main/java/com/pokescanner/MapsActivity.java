@@ -619,8 +619,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 scanCurrentPosition = false;
             }
             LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
-            System.out.println("Bounds: " +bounds.northeast.latitude+", "+bounds.northeast.longitude+", "+bounds.southwest.latitude+", "+bounds.southwest.longitude);
-
+            //System.out.println("Bounds: " +bounds.northeast.latitude+", "+bounds.northeast.longitude+", "+bounds.southwest.latitude+", "+bounds.southwest.longitude);
+            String test = "&w=6.482853474751764&e=7.0571951244914&n=51.39983340455366&s=51.040104762186175";
+            getPokemonFromGomap(bounds.southwest.longitude,bounds.northeast.longitude,bounds.northeast.latitude,bounds.southwest.latitude);
             if (scanPosition != null) {
                 scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
                 if (scanMap != null) {
@@ -650,7 +651,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
 
                     if (usersToAdd.size() == 0) {
-                        showToast(R.string.SCAN_FAILED);
                         showProgressbar(false);
                         return;
                     }
@@ -1030,7 +1030,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             gymstopRefresher.unsubscribe();
 
         //Using RX java we setup an interval to refresh the map
-        pokeonRefresher = Observable.interval(20, TimeUnit.SECONDS, AndroidSchedulers.mainThread())
+        pokeonRefresher = Observable.interval(Settings.get(this).getMapRefresh(), TimeUnit.SECONDS, AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Long>() {
                     @Override
                     public void call(Long aLong) {
@@ -1241,7 +1241,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onCameraChange(CameraPosition cameraPosition) {
-        createBoundingBox();
+        //createBoundingBox();
     }
 
     @Override
@@ -1775,7 +1775,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     @SuppressWarnings({"MissingPermission"})
     public void onMapReady(GoogleMap googleMap) {
-        getPokemonFromGomap();
         mMap = googleMap;
 
         System.out.println("Map ready");
@@ -1916,15 +1915,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public String pokemonGomapString;
 
-    public void getPokemonFromGomap() {
+    public void getPokemonFromGomap(double w, double e, double n, double s) {
         ArrayList<Pokemons> pokemonsArrayList = new ArrayList<>();
-
-        final String sUrl = "http://148.251.192.149/m.php?mid=0&ex=%5B14%2C17%2C37%2C52%2C54%2C60%2C69%2C79%2C90%2C100%2C116%2C120%2C124%2C125%2C129%2C133%2C162%2C164%2C190%2C220%2C221%2C223%5D&w=6.482853474751764&e=7.0571951244914&n=51.39983340455366&s=51.040104762186175";
+        String param = "&w="+w+"&e="+e+"&n="+n+"&s="+s;
+        System.out.println("Param: "+param);
+        final String sUrl = "http://148.251.192.149/m.php?mid=0&ex=%5B14%2C17%2C37%2C52%2C54%2C60%2C69%2C79%2C90%2C100%2C116%2C120%2C124%2C125%2C129%2C133%2C162%2C164%2C190%2C220%2C221%2C223%5D" + param;
         AsyncTask asyncTask = new AsyncTask<Void, Void, Void>() {
 
             @Override
             protected void onPostExecute(Void aVoid) {
-                //Todo
+
             }
 
             @Override
@@ -1941,12 +1941,26 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
                     pokemonGomapString = total.toString();
                     GoMapPokemonList goMapPokemonList = new Gson().fromJson(pokemonGomapString, GoMapPokemonList.class);
-                    ArrayList<Pokemons> pokemonsArrayList1 = new ArrayList<Pokemons>();
+                    ArrayList<Pokemons> pokemonsArrayList1 = getPokelist();
+                    int counter = 0;
                     for (GoMapPokemon elem : goMapPokemonList.pokemons) {
+
+
                         Pokemons pokemons = new Pokemons(elem);
-                        pokemons.setName(pokemons.getFormalName(MapsActivity.instance));
-                        pokemonsArrayList1.add(pokemons);
+                        if(!pokemonsArrayList1.contains(pokemons)) {
+                            counter++;
+                            pokemons.setName(pokemons.getFormalName(MapsActivity.instance));
+                            pokemonsArrayList1.add(pokemons);
+                        }
                     }
+                    final int finalCounter = counter;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            showToast(finalCounter +" Pokémon added from Gomap");
+                        }
+                    });
                     savePokelist(pokemonsArrayList1);
                     System.out.println("Gomap Pokemon Hinzugefügt");
                 } catch (Exception e) {
