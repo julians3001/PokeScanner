@@ -2,6 +2,8 @@ package com.pokescanner;
 
 import android.annotation.TargetApi;
 import android.app.ActivityManager;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -18,6 +20,7 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
+import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -29,6 +32,7 @@ import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.multidex.MultiDex;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v4.util.ArrayMap;
@@ -141,7 +145,10 @@ import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.Format;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -618,9 +625,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 scanPosition = getCurrentLocation();
                 scanCurrentPosition = false;
             }
-            LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
+
             //System.out.println("Bounds: " +bounds.northeast.latitude+", "+bounds.northeast.longitude+", "+bounds.southwest.latitude+", "+bounds.southwest.longitude);
             String test = "&w=6.482853474751764&e=7.0571951244914&n=51.39983340455366&s=51.040104762186175";
+            LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
             getPokemonFromGomap(bounds.southwest.longitude,bounds.northeast.longitude,bounds.northeast.latitude,bounds.southwest.latitude);
             if (scanPosition != null) {
                 scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
@@ -759,6 +767,34 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
+    public void pokemonNotification(Pokemons pokemon){
+        Intent launchIntent = new Intent(this, MapsActivity.class);
+        launchIntent.setAction(Long.toString(System.currentTimeMillis()));
+        launchIntent.putExtra("methodName", "newPokemon");
+        Gson gson = new Gson();
+        String json = gson.toJson(pokemon, new TypeToken<Pokemons>() {
+        }.getType());
+        launchIntent.putExtra("pokemon", json);
+        PendingIntent pIntent = PendingIntent.getActivity(this, 0, launchIntent, PendingIntent.FLAG_ONE_SHOT);
+
+        Bitmap bitmap = DrawableUtils.getBitmapFromView(pokemon.getResourceID(this), "", this, DrawableUtils.PokemonType);
+        NotificationCompat.Builder mBuilder =
+                new NotificationCompat.Builder(this)
+                        .setSmallIcon(R.drawable.ic_refresh_white_36dp)
+                        .setLargeIcon(bitmap)
+                        .setContentTitle("New Pokémon nearby")
+                        .setVibrate(new long[]{100, 100})
+                        .setContentIntent(pIntent)
+                        .setAutoCancel(true)
+                        .setContentText(pokemon.getFormalName(this) + " (" + String.format("%.2f", pokemon.getIvInPercentage()) + "%) (" + DrawableUtils.getExpireTime(pokemon.getExpires(), pokemon.getFoundTime()) + ")");
+        Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        mBuilder.setSound(alarmSound);
+        NotificationManager mNotificationManager =
+                (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (pokemon.isNotExpired())
+            mNotificationManager.notify((int) System.currentTimeMillis(), mBuilder.build());
+    }
+
     //Map related Functions
     public void refreshMap() {
 
@@ -793,7 +829,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         if (pokemonsMarkerMap.get(pokemonsCollection.get(i)) != null)
                             pokemonsMarkerMap.get(pokemonsCollection.get(i)).remove();
                         pokemonsMarkerMap.remove(pokemonsCollection.get(i));
-                        System.out.println(pokemonsCollection.get(i).getFormalName(this) + " removed");
+                        try{
+                            System.out.println(pokemonsCollection.get(i).getFormalName(this) + " removed");
+                        }   catch (Exception e){
+                            e.printStackTrace();
+                        }
                     }
                 }
 
@@ -833,7 +873,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                             final Marker[] marker = {pokemonsMarkerMap.get(pokemon)};
                                             //Update the marker
                                             //UNTESTED
-                                            if (marker[0] != null) {
+                                            /*if (marker[0] != null) {
                                                 runOnUiThread(new Runnable() {
                                                     @Override
                                                     public void run() {
@@ -841,7 +881,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                                         marker[0] = pokemon.updateMarker(marker[0], MapsActivity.instance);
                                                     }
                                                 });
-                                            }
+                                            }  */
                                         } else {
                                             final MarkerOptions markerOptions = pokemon.getMarker(MapsActivity.instance);
                                             //If our pokemon wasn't in our hashmap lets add him
@@ -875,7 +915,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     @Override
                                     public void run() {
                                         if (pokemonsMarkerMap.get(pokemon) != null)
-                                            pokemonsMarkerMap.get(pokemon).remove();
+                                            try{
+                                                pokemonsMarkerMap.get(pokemon).remove();
+                                            }   catch (Exception e){
+                                                e.printStackTrace();
+                                            }
                                     }
                                 });
                                 //Then remove the pokemon
@@ -1951,6 +1995,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             counter++;
                             pokemons.setName(pokemons.getFormalName(MapsActivity.instance));
                             pokemonsArrayList1.add(pokemons);
+                            if(UiUtils.isPokemonNotification(pokemons)){
+                                pokemonNotification(pokemons);
+                            }
                         }
                     }
                     final int finalCounter = counter;
@@ -2148,7 +2195,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                 snippet.setGravity(Gravity.CENTER);
                 if (markerKey instanceof Pokemons) {
                     Pokemons pokemons = ((Pokemons) markerKey);
-                    snippet.setText(MapsActivity.this.getText(R.string.expires_in) + " " + DrawableUtils.getExpireTime(pokemons.getExpires(), pokemons.getFoundTime()) + "\n" + "Attack: " + pokemons.getIndividualAttack() + "\n" + "Defense: " + pokemons.getIndividualDefense() + "\n" + "Stamina: " + pokemons.getIndividualStamina());
+                    Format formatter = new SimpleDateFormat("dd.MM.yyyy HH:mm");
+                    snippet.setText(MapsActivity.this.getText(R.string.expires_in) + " " + formatter.format(new Date(pokemons.getExpires())) + "\n" + "Attack: " + pokemons.getIndividualAttack() + "\n" + "Defense: " + pokemons.getIndividualDefense() + "\n" + "Stamina: " + pokemons.getIndividualStamina());
                 } else {
                     snippet.setText(marker.getSnippet());
                     info.addView(title);

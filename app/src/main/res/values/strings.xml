@@ -145,7 +145,7 @@
 
     <string name="guard_pokemon">Guard Pokémon : </string>
     <string name="gym_points">Gym points : </string>
-    <string name="expires_in">Expires in : </string>
+    <string name="expires_in">Expires: </string>
     <string name="lure_expires_in">Lure expires in : </string>
     <string name="lured_pokemon">Lured Pokémon</string>
     <string name="open_in_gmaps">Open in Google Maps</string>

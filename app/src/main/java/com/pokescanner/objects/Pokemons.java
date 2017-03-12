@@ -18,6 +18,9 @@ import org.joda.time.DateTime;
 import org.joda.time.Instant;
 
 import java.math.BigDecimal;
+import java.text.Format;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import POGOProtos.Map.Pokemon.MapPokemonOuterClass;
 import io.realm.RealmObject;
@@ -98,6 +101,7 @@ public class Pokemons  extends RealmObject{
     }
 
     public MarkerOptions getMarker(Context context) {
+        Format formatter = new SimpleDateFormat("dd.MM.yyyy HH:mm");
         int resourceID = getResourceID(context);
         //Find our interval
         String timeOut = DrawableUtils.getExpireTime(getExpires(), getFoundTime());
@@ -114,7 +118,7 @@ public class Pokemons  extends RealmObject{
         if(Settings.get(context).isUseOldMapMarker()){
             pokeIcon.title(getFormalName(context) +" (" + String.format("%.2f", getIvInPercentage())+"%)");
             pokeIcon.draggable(true);
-            pokeIcon.snippet(context.getText(R.string.expires_in)+" " + timeOut+"\n"+"Attack: "+getIndividualAttack()+"\n"+"Defense: "+getIndividualDefense()+"\n"+"Stamina: "+getIndividualStamina());
+            pokeIcon.snippet(R.string.expires_in +"" + formatter.format(new Date(getExpires())) +"\n"+"Attack: "+getIndividualAttack()+"\n"+"Defense: "+getIndividualDefense()+"\n"+"Stamina: "+getIndividualStamina());
         }
         return pokeIcon;
     }
@@ -130,7 +134,7 @@ public class Pokemons  extends RealmObject{
     }
 
     public Marker updateMarker(Marker marker,Context context) {
-
+        Format formatter = new SimpleDateFormat("dd.MM.yyyy HH:mm");
         String expires = DrawableUtils.getExpireTime(getExpires(),getFoundTime());
 
         Bitmap newbit = DrawableUtils.getBitmapFromView(getResourceID(context),"",context,DrawableUtils.PokemonType);
@@ -138,7 +142,7 @@ public class Pokemons  extends RealmObject{
         try{
 
             //marker.setIcon(BitmapDescriptorFactory.fromBitmap(newbit));
-            marker.setSnippet(context.getText(R.string.expires_in)+" " + expires+"\n"+"Attack: "+getIndividualAttack()+"\n"+"Defense: "+getIndividualDefense()+"\n"+"Stamina: "+getIndividualStamina());
+            marker.setSnippet(R.string.expires_in +"" + formatter.format(new Date(getExpires()))+"\n"+"Attack: "+getIndividualAttack()+"\n"+"Defense: "+getIndividualDefense()+"\n"+"Stamina: "+getIndividualStamina());
         } catch(Exception e){
             e.printStackTrace();
         }

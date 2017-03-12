@@ -116,7 +116,7 @@
   <string name="update_available_long">verfügbar.</string>
   <string name="guard_pokemon">Beschützer Pokémon: </string>
   <string name="gym_points">Arena Punkte: </string>
-  <string name="expires_in">Verschwindet in: </string>
+  <string name="expires_in">Verschwindet: </string>
   <string name="lure_expires_in">Lockmodul endet in: </string>
   <string name="lured_pokemon">Angelocktes Pokémon</string>
   <string name="open_in_gmaps">In Google Maps öffnen</string>

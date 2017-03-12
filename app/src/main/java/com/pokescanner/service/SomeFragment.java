@@ -2,16 +2,22 @@ package com.pokescanner.service;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.location.Location;
 import android.location.LocationManager;
+import android.media.RingtoneManager;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -23,6 +29,7 @@ import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v4.util.ArrayMap;
@@ -81,6 +88,8 @@ import com.pokescanner.events.ScanCircleEvent;
 import com.pokescanner.exceptions.NoCameraPositionException;
 import com.pokescanner.exceptions.NoMapException;
 import com.pokescanner.helper.Generation;
+import com.pokescanner.helper.GoMapPokemon;
+import com.pokescanner.helper.GoMapPokemonList;
 import com.pokescanner.helper.GymFilter;
 import com.pokescanner.loaders.MultiAccountLoader;
 import com.pokescanner.loaders.PokemonGoWithUsername;
@@ -99,6 +108,16 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -1035,7 +1054,8 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                 scanCurrentPosition = false;
             }
 
-
+            LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
+            getPokemonFromGomap(bounds.southwest.longitude,bounds.northeast.longitude,bounds.northeast.latitude,bounds.southwest.latitude);
             if (scanPosition != null) {
                 scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
                 if (scanMap != null) {
@@ -1065,7 +1085,6 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                     }
 
                     if (usersToAdd.size() == 0) {
-                        showToast(R.string.SCAN_FAILED);
                         showProgressbar(false);
                         return;
                     }
@@ -1087,6 +1106,120 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                 showProgressbar(false);
             }
         }
+    }
+    public String pokemonGomapString;
+    public static ArrayList<Pokemons> getPokelist() {
+        String pokelistjson = "";
+        try {
+            FileInputStream fileInputStream = MapsActivity.instance.openFileInput(MapsActivity.POKEMONFILENAME);
+            pokelistjson = MapsActivity.convertStreamToString(fileInputStream);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        ArrayList<Pokemons> pokelist = (new Gson()).fromJson(pokelistjson, new TypeToken<ArrayList<Pokemons>>() {
+        }.getType());
+        if (pokelist == null) {
+            return new ArrayList<>();
+        }
+        return pokelist;
+    }
+
+    public void getPokemonFromGomap(double w, double e, double n, double s) {
+        ArrayList<Pokemons> pokemonsArrayList = new ArrayList<>();
+        String param = "&w="+w+"&e="+e+"&n="+n+"&s="+s;
+        System.out.println("Param: "+param);
+        final String sUrl = "http://148.251.192.149/m.php?mid=0&ex=%5B14%2C17%2C37%2C52%2C54%2C60%2C69%2C79%2C90%2C100%2C116%2C120%2C124%2C125%2C129%2C133%2C162%2C164%2C190%2C220%2C221%2C223%5D" + param;
+        AsyncTask asyncTask = new AsyncTask<Void, Void, Void>() {
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+
+            }
+
+            @Override
+            protected Void doInBackground(Void... voids) {
+                try {
+                    URL url = new URL(sUrl);
+                    HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                    InputStream in = new BufferedInputStream(urlConnection.getInputStream());
+                    BufferedReader r = new BufferedReader(new InputStreamReader(in));
+                    StringBuilder total = new StringBuilder();
+                    String line;
+                    while ((line = r.readLine()) != null) {
+                        total.append(line).append('\n');
+                    }
+                    pokemonGomapString = total.toString();
+                    GoMapPokemonList goMapPokemonList = new Gson().fromJson(pokemonGomapString, GoMapPokemonList.class);
+                    ArrayList<Pokemons> pokemonsArrayList1 = getPokelist();
+                    int counter = 0;
+                    for (GoMapPokemon elem : goMapPokemonList.pokemons) {
+
+
+                        Pokemons pokemons = new Pokemons(elem);
+                        if(!pokemonsArrayList1.contains(pokemons)) {
+                            counter++;
+                            pokemons.setName(pokemons.getFormalName(MapsActivity.instance));
+                            pokemonsArrayList1.add(pokemons);
+                            if(UiUtils.isPokemonNotification(pokemons)){
+                                pokemonNotification(pokemons);
+                            }
+                        }
+                    }
+                    final int finalCounter = counter;
+
+                    savePokelist(pokemonsArrayList1);
+                    System.out.println("Gomap Pokemon Hinzugefügt");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        }.execute();
+
+    }
+    public static void savePokelist(ArrayList<Pokemons> pokelist) {
+        FileOutputStream fos;
+        try {
+            String string = (new Gson()).toJson(pokelist);
+            fos = MapsActivity.instance.openFileOutput(MapsActivity.POKEMONFILENAME, Context.MODE_PRIVATE);
+
+            fos.write(string.getBytes());
+            fos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void pokemonNotification(Pokemons pokemon){
+        Intent launchIntent = new Intent(myContext, MapsActivity.class);
+        launchIntent.setAction(Long.toString(System.currentTimeMillis()));
+        launchIntent.putExtra("methodName", "newPokemon");
+        Gson gson = new Gson();
+        String json = gson.toJson(pokemon, new TypeToken<Pokemons>() {
+        }.getType());
+        launchIntent.putExtra("pokemon", json);
+        PendingIntent pIntent = PendingIntent.getActivity(myContext, 0, launchIntent, PendingIntent.FLAG_ONE_SHOT);
+
+        Bitmap bitmap = DrawableUtils.getBitmapFromView(pokemon.getResourceID(myContext), "", myContext, DrawableUtils.PokemonType);
+        NotificationCompat.Builder mBuilder =
+                new NotificationCompat.Builder(myContext)
+                        .setSmallIcon(R.drawable.ic_refresh_white_36dp)
+                        .setLargeIcon(bitmap)
+                        .setContentTitle("New Pokémon nearby")
+                        .setVibrate(new long[]{100, 100})
+                        .setContentIntent(pIntent)
+                        .setAutoCancel(true)
+                        .setContentText(pokemon.getFormalName(myContext) + " (" + String.format("%.2f", pokemon.getIvInPercentage()) + "%) (" + DrawableUtils.getExpireTime(pokemon.getExpires(), pokemon.getFoundTime()) + ")");
+        Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        mBuilder.setSound(alarmSound);
+        NotificationManager mNotificationManager =
+                (NotificationManager) myContext.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (pokemon.isNotExpired())
+            mNotificationManager.notify((int) System.currentTimeMillis(), mBuilder.build());
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
