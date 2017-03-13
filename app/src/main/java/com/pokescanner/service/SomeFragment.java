@@ -329,7 +329,16 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void toggleMapType() {
-        MapsActivity.instance.finishAndRemoveTask ();
+        floatingActionMenu.close(true);
+        SomeFragment.someFragment = null;
+        Intent intent = new Intent (getContext(), OverlayService.class);
+        getContext().stopService(intent);
+        Intent launchIntent = getActivity().getPackageManager().getLaunchIntentForPackage("com.pokescanner");
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        if(launchIntent!=null){
+            startActivity(launchIntent);
+        }
+        MapsActivity.instance.finishAndRemoveTask();
     }
 
     @Override
