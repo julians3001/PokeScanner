@@ -31,6 +31,7 @@ public class Settings {
     boolean useOldMapMarker;
     boolean shuffleIcons;
     boolean showLuredPokemon;
+    boolean showPokemon;
 
     public void save(Context context) {
         SettingsUtil.saveSettings(context, this);

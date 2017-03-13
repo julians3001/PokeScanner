@@ -31,8 +31,16 @@ public class SettingsUtil {
     public static final String POKEMON_ICON_SCALE = "pokemonIconScale";
     public static final String SCAN_VALUE = "scanValue";
     public static final String LAST_USERNAME = "lastUsername";
+    public static final String SHOW_POKEMON = "showPokemon";
 
     public static final String SHUFFLE_ICONS = "shuffleIcons";
+
+    public static void showPokemon(final Context context){
+        context.getSharedPreferences(context.getString(R.string.shared_key), Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(SHOW_POKEMON, !getSettings(context).isShowPokemon())
+                .apply();
+    }
 
     public static void searchRadiusDialog(final Context context) {
         int scanValue = Settings.get(context).getScanValue();
@@ -47,14 +55,14 @@ public class SettingsUtil {
         final TextView tvNumber = (TextView) dialog.findViewById(R.id.tvNumber);
         final TextView tvEstimate = (TextView) dialog.findViewById(R.id.tvEstimate);
         tvNumber.setText(String.valueOf(scanValue));
-        tvEstimate.setText(context.getString(R.string.timeEstimate) + " " + UiUtils.getSearchTime(scanValue,context));
+        tvEstimate.setText(context.getString(R.string.timeEstimate) + " " + UiUtils.getSearchTime(scanValue, context));
         seekBar.setProgress(scanValue);
         seekBar.setMax(24);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 tvNumber.setText(String.valueOf(i));
-                tvEstimate.setText(context.getString(R.string.timeEstimate) + " " + UiUtils.getSearchTime(i,context));
+                tvEstimate.setText(context.getString(R.string.timeEstimate) + " " + UiUtils.getSearchTime(i, context));
             }
 
             @Override
@@ -80,7 +88,7 @@ public class SettingsUtil {
                 }
                 context.getSharedPreferences(context.getString(R.string.shared_key), Context.MODE_PRIVATE)
                         .edit()
-                        .putInt(SCAN_VALUE,scanOut)
+                        .putInt(SCAN_VALUE, scanOut)
                         .apply();
                 dialog.dismiss();
             }
@@ -97,48 +105,50 @@ public class SettingsUtil {
 
     public static Settings getSettings(Context context) {
         SharedPreferences sharedPrefs = context.getSharedPreferences(
-            context.getString(R.string.shared_key),
-            Context.MODE_PRIVATE
+                context.getString(R.string.shared_key),
+                Context.MODE_PRIVATE
         );
         return new Settings(
-            sharedPrefs.getBoolean(ENABLE_UPDATES,true),
-            sharedPrefs.getBoolean(KEY_BOUNDING_BOX, true),
-            sharedPrefs.getBoolean(DRIVING_MODE, false),
-            sharedPrefs.getBoolean(FORCE_ENGLISH_NAMES,false),
-            sharedPrefs.getBoolean(ENABLE_LOW_MEMORY,true),
-            sharedPrefs.getInt(SCAN_VALUE, 4),
-            sharedPrefs.getInt(SERVER_REFRESH_RATE, 11),
-            sharedPrefs.getInt(POKEMON_ICON_SCALE, 2),
-            sharedPrefs.getInt(MAP_REFRESH_RATE, 2),
-            sharedPrefs.getString(LAST_USERNAME, ""),
-            sharedPrefs.getBoolean(SHOW_ONLY_LURED, true),
-            sharedPrefs.getBoolean(SHOW_GYMS, true),
-            sharedPrefs.getBoolean(SHOW_POKESTOPS, true),
-            sharedPrefs.getBoolean(KEY_OLD_MARKER, true),
-            sharedPrefs.getBoolean(SHUFFLE_ICONS, false),
-            sharedPrefs.getBoolean(SHOW_LURED_POKEMON, false)
+                sharedPrefs.getBoolean(ENABLE_UPDATES, true),
+                sharedPrefs.getBoolean(KEY_BOUNDING_BOX, true),
+                sharedPrefs.getBoolean(DRIVING_MODE, false),
+                sharedPrefs.getBoolean(FORCE_ENGLISH_NAMES, false),
+                sharedPrefs.getBoolean(ENABLE_LOW_MEMORY, true),
+                sharedPrefs.getInt(SCAN_VALUE, 4),
+                sharedPrefs.getInt(SERVER_REFRESH_RATE, 11),
+                sharedPrefs.getInt(POKEMON_ICON_SCALE, 2),
+                sharedPrefs.getInt(MAP_REFRESH_RATE, 2),
+                sharedPrefs.getString(LAST_USERNAME, ""),
+                sharedPrefs.getBoolean(SHOW_ONLY_LURED, true),
+                sharedPrefs.getBoolean(SHOW_GYMS, true),
+                sharedPrefs.getBoolean(SHOW_POKESTOPS, true),
+                sharedPrefs.getBoolean(KEY_OLD_MARKER, true),
+                sharedPrefs.getBoolean(SHUFFLE_ICONS, false),
+                sharedPrefs.getBoolean(SHOW_LURED_POKEMON, false),
+                sharedPrefs.getBoolean(SHOW_POKEMON, true)
         );
     }
 
     public static void saveSettings(Context context, Settings settings) {
         context.getSharedPreferences(context.getString(R.string.shared_key), Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(ENABLE_UPDATES,settings.isUpdatesEnabled())
-            .putBoolean(KEY_BOUNDING_BOX, settings.isBoundingBoxEnabled())
-            .putBoolean(DRIVING_MODE, settings.isDrivingModeEnabled())
-            .putBoolean(FORCE_ENGLISH_NAMES,settings.isForceEnglishNames())
-            .putBoolean(ENABLE_LOW_MEMORY,settings.isEnableLowMemory())
-            .putInt(SCAN_VALUE,settings.getScanValue())
-            .putInt(SERVER_REFRESH_RATE, settings.getServerRefresh())
-            .putInt(POKEMON_ICON_SCALE, settings.getScale())
-            .putInt(MAP_REFRESH_RATE, settings.getMapRefresh())
-            .putString(LAST_USERNAME, settings.getLastUsername())
-            .putBoolean(SHOW_ONLY_LURED, settings.isShowOnlyLured())
-            .putBoolean(SHOW_GYMS, settings.isGymsEnabled())
-            .putBoolean(SHOW_POKESTOPS, settings.isPokestopsEnabled())
-            .putBoolean(KEY_OLD_MARKER, settings.isUseOldMapMarker())
-            .putBoolean(SHUFFLE_ICONS, settings.isShuffleIcons())
-            .putBoolean(SHOW_LURED_POKEMON, settings.isShowLuredPokemon())
-            .apply();
+                .edit()
+                .putBoolean(ENABLE_UPDATES, settings.isUpdatesEnabled())
+                .putBoolean(KEY_BOUNDING_BOX, settings.isBoundingBoxEnabled())
+                .putBoolean(DRIVING_MODE, settings.isDrivingModeEnabled())
+                .putBoolean(FORCE_ENGLISH_NAMES, settings.isForceEnglishNames())
+                .putBoolean(ENABLE_LOW_MEMORY, settings.isEnableLowMemory())
+                .putInt(SCAN_VALUE, settings.getScanValue())
+                .putInt(SERVER_REFRESH_RATE, settings.getServerRefresh())
+                .putInt(POKEMON_ICON_SCALE, settings.getScale())
+                .putInt(MAP_REFRESH_RATE, settings.getMapRefresh())
+                .putString(LAST_USERNAME, settings.getLastUsername())
+                .putBoolean(SHOW_ONLY_LURED, settings.isShowOnlyLured())
+                .putBoolean(SHOW_GYMS, settings.isGymsEnabled())
+                .putBoolean(SHOW_POKESTOPS, settings.isPokestopsEnabled())
+                .putBoolean(KEY_OLD_MARKER, settings.isUseOldMapMarker())
+                .putBoolean(SHUFFLE_ICONS, settings.isShuffleIcons())
+                .putBoolean(SHOW_LURED_POKEMON, settings.isShowLuredPokemon())
+                .putBoolean(SHOW_POKEMON,settings.isShowPokemon())
+                .apply();
     }
 }

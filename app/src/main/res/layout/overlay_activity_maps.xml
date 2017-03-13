@@ -48,7 +48,7 @@
             android:id="@+id/btnOverlaySataliteMode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_satellite_white_24dp"
+            android:src="@drawable/close"
             fab:fab_size="mini"
             fab:fab_colorNormal="@color/colorPrimary"
             fab:fab_colorPressed="@color/colorAccent"

@@ -327,18 +327,9 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
         EventBus.getDefault().post(new MinimizeToggleEvent());
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void toggleMapType() {
-        if(mMap != null) {
-            if(mMap.getMapType() == GoogleMap.MAP_TYPE_NORMAL) {
-                mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
-                btnSataliteMode.setImageResource(R.drawable.ic_map_white_24dp);
-            }
-            else {
-                mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-                btnSataliteMode.setImageResource(R.drawable.ic_satellite_white_24dp);
-            }
-        }
-        floatingActionMenu.close(true);
+        MapsActivity.instance.finishAndRemoveTask ();
     }
 
     @Override
@@ -1168,7 +1159,12 @@ public class SomeFragment extends Fragment implements OnMapReadyCallback, Google
                         }
                     }
                     final int finalCounter = counter;
-
+                    MapsActivity.instance.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            showToast(finalCounter + " Pokémon added from Gomap");
+                        }
+                    });
                     savePokelist(pokemonsArrayList1);
                     System.out.println("Gomap Pokemon Hinzugefügt");
                 } catch (Exception e) {

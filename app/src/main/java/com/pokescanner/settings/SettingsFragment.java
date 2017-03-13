@@ -382,7 +382,8 @@ public class SettingsFragment extends PreferenceFragment implements SharedPrefer
                 sharedPreferences.getBoolean(SettingsUtil.SHOW_POKESTOPS, true),
                 sharedPreferences.getBoolean(SettingsUtil.KEY_OLD_MARKER, false),
                 sharedPreferences.getBoolean(SettingsUtil.SHUFFLE_ICONS, false),
-                sharedPreferences.getBoolean(SettingsUtil.SHOW_LURED_POKEMON, true)
+                sharedPreferences.getBoolean(SettingsUtil.SHOW_LURED_POKEMON, true),
+                sharedPreferences.getBoolean(SettingsUtil.SHOW_POKEMON,true)
         ));
     }
 

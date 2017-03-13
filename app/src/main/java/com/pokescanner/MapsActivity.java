@@ -629,7 +629,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             //System.out.println("Bounds: " +bounds.northeast.latitude+", "+bounds.northeast.longitude+", "+bounds.southwest.latitude+", "+bounds.southwest.longitude);
             String test = "&w=6.482853474751764&e=7.0571951244914&n=51.39983340455366&s=51.040104762186175";
             LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
-            getPokemonFromGomap(bounds.southwest.longitude,bounds.northeast.longitude,bounds.northeast.latitude,bounds.southwest.latitude);
+            getPokemonFromGomap(bounds.southwest.longitude, bounds.northeast.longitude, bounds.northeast.latitude, bounds.southwest.latitude);
             if (scanPosition != null) {
                 scanMap = makeHexScanMap(scanPosition, scanValue, 1, new ArrayList<LatLng>());
                 if (scanMap != null) {
@@ -767,7 +767,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
-    public void pokemonNotification(Pokemons pokemon){
+    public void pokemonNotification(Pokemons pokemon) {
         Intent launchIntent = new Intent(this, MapsActivity.class);
         launchIntent.setAction(Long.toString(System.currentTimeMillis()));
         launchIntent.putExtra("methodName", "newPokemon");
@@ -829,15 +829,22 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         if (pokemonsMarkerMap.get(pokemonsCollection.get(i)) != null)
                             pokemonsMarkerMap.get(pokemonsCollection.get(i)).remove();
                         pokemonsMarkerMap.remove(pokemonsCollection.get(i));
-                        try{
+                        try {
                             System.out.println(pokemonsCollection.get(i).getFormalName(this) + " removed");
-                        }   catch (Exception e){
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
                     }
                 }
 
                 //Okay so we're going to fix the annoying issue where the markers were being constantly redrawn
+                if (!SettingsUtil.getSettings(this).isShowPokemon()) {
+                    pokemonsMarkerMap = new ArrayMap<Pokemons, Marker>();
+
+                    mMap.clear();
+
+                    return;
+                }
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -915,9 +922,9 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                     @Override
                                     public void run() {
                                         if (pokemonsMarkerMap.get(pokemon) != null)
-                                            try{
+                                            try {
                                                 pokemonsMarkerMap.get(pokemon).remove();
-                                            }   catch (Exception e){
+                                            } catch (Exception e) {
                                                 e.printStackTrace();
                                             }
                                     }
@@ -1235,6 +1242,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             forceRefreshEvent(new ForceRefreshEvent());
         onRestartRefreshEvent(new RestartRefreshEvent());
         realm = Realm.getDefaultInstance();
+        checkIfShowPokemon();
     }
 
     @Override
@@ -1789,18 +1797,31 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     boolean nightMode = false;
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    public void checkIfShowPokemon() {
+        if (SettingsUtil.getSettings(this).isShowPokemon()) {
+            btnSataliteMode.setColorNormal(ResourcesCompat.getColor(getResources(), R.color.colorPrimary, null));
+            btnSataliteMode.setImageDrawable(getDrawable(R.drawable.toggle_switch));
+        } else {
+            btnSataliteMode.setColorNormal(ResourcesCompat.getColor(getResources(), R.color.colorAccent, null));
+            btnSataliteMode.setImageDrawable(getDrawable(R.drawable.toggle_switch_off));
+        }
+    }
+
+
     @OnClick(R.id.btnSataliteMode)
     public void toggleMapType() {
         if (mMap != null) {
 
-            if (nightMode) {
+            /*if (nightMode) {
                 mMap.setMapStyle(null);
                 nightMode = false;
             } else {
                 mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.maps_style_night));
                 nightMode = true;
-            }
-
+            }*/
+            SettingsUtil.showPokemon(this);
+            checkIfShowPokemon();
 
 
             /*if (mMap.getMapType() == GoogleMap.MAP_TYPE_NORMAL) {
@@ -1961,8 +1982,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     public void getPokemonFromGomap(double w, double e, double n, double s) {
         ArrayList<Pokemons> pokemonsArrayList = new ArrayList<>();
-        String param = "&w="+w+"&e="+e+"&n="+n+"&s="+s;
-        System.out.println("Param: "+param);
+        String param = "&w=" + w + "&e=" + e + "&n=" + n + "&s=" + s;
+        System.out.println("Param: " + param);
         final String sUrl = "http://148.251.192.149/m.php?mid=0&ex=%5B14%2C17%2C37%2C52%2C54%2C60%2C69%2C79%2C90%2C100%2C116%2C120%2C124%2C125%2C129%2C133%2C162%2C164%2C190%2C220%2C221%2C223%5D" + param;
         AsyncTask asyncTask = new AsyncTask<Void, Void, Void>() {
 
@@ -1991,11 +2012,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
                         Pokemons pokemons = new Pokemons(elem);
-                        if(!pokemonsArrayList1.contains(pokemons)) {
+                        if (!pokemonsArrayList1.contains(pokemons)) {
                             counter++;
                             pokemons.setName(pokemons.getFormalName(MapsActivity.instance));
                             pokemonsArrayList1.add(pokemons);
-                            if(UiUtils.isPokemonNotification(pokemons)){
+                            if (UiUtils.isPokemonNotification(pokemons)) {
                                 pokemonNotification(pokemons);
                             }
                         }
@@ -2005,7 +2026,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                         @Override
                         public void run() {
 
-                            showToast(finalCounter +" Pokémon added from Gomap");
+                            showToast(finalCounter + " Pokémon added from Gomap");
                         }
                     });
                     savePokelist(pokemonsArrayList1);
@@ -2055,22 +2076,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @OnClick(R.id.btnClear)
     public void cleanPokemon() {
-        if (mMap != null) {
-            realm.executeTransaction(new Realm.Transaction() {
-                @Override
-                public void execute(Realm realm) {
-                    savePokelist(new ArrayList<Pokemons>());
 
-                    pokemonsMarkerMap = new ArrayMap<Pokemons, Marker>();
+        savePokelist(new ArrayList<Pokemons>());
 
-                    mMap.clear();
-                    // showToast(R.string.cleared_map);
-                }
-            });
+        pokemonsMarkerMap = new ArrayMap<Pokemons, Marker>();
 
-            forceRefreshEvent(new ForceRefreshEvent());
-            clearPokemonListOnWear();
-        }
+        mMap.clear();
+
+        forceRefreshEvent(new ForceRefreshEvent());
+        clearPokemonListOnWear();
+
     }
 
     public void cleanPokemon(long encounterid) {
